@@ -1,6 +1,6 @@
 import datetime
 import os
-from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey,MetaData
+from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, MetaData, Boolean
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped
@@ -14,6 +14,21 @@ engine = create_engine(database_url, echo=True)
 class Base(DeclarativeBase):
     pass
 
+class User(Base):
+    __tablename__ = "users"
+    id:Mapped[int] = mapped_column(primary_key=True)
+    name:Mapped[str] = mapped_column(unique=True)
+    password:Mapped[str] = mapped_column(String(100))
+    email:Mapped[str] = mapped_column(unique=True)
+    phone:Mapped[str] = mapped_column(unique=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
+    role: Mapped["Role"] = relationship(back_populates="users")
+class Role(Base):
+    __tablename__ = "roles"
+    id:Mapped[int] = mapped_column(primary_key=True)
+    name:Mapped[str] = mapped_column(unique=True)
+    users:Mapped[List["Role"]] = relationship(back_populates="role", cascade="all, delete-orphan")
+
 class Manufacturer(Base):
     __tablename__ = "manufacturers"
     id:Mapped[int] = mapped_column(primary_key=True)
@@ -21,6 +36,7 @@ class Manufacturer(Base):
     parts:Mapped[List["Parts"]] = relationship(back_populates="manufacturer", cascade="all, delete-orphan")
     engines:Mapped[List["Engine"]] = relationship(back_populates="manufacturer", cascade="all,delete-orphan")
     models:Mapped[List["Modell"]] = relationship(back_populates="manufacturer", cascade="all,delete-orphan")
+
 class SellHeader(Base):
     __tablename__ = "sell_headers"
     id:Mapped[int] = mapped_column(primary_key=True)
