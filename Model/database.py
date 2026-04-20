@@ -3,8 +3,7 @@ import os
 from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, MetaData, Boolean
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
 from typing import List
 
 
@@ -27,7 +26,7 @@ class Role(Base):
     __tablename__ = "roles"
     id:Mapped[int] = mapped_column(primary_key=True)
     name:Mapped[str] = mapped_column(unique=True)
-    users:Mapped[List["Role"]] = relationship(back_populates="role", cascade="all, delete-orphan")
+    users:Mapped[List["User"]] = relationship(back_populates="role", cascade="all, delete-orphan")
 
 class Manufacturer(Base):
     __tablename__ = "manufacturers"
@@ -134,7 +133,10 @@ class MotorCompatibility(Base):
     modell:Mapped["Modell"] = relationship(back_populates="motor_comps")
     engine_id:Mapped[int] = mapped_column(ForeignKey("engines.id"))
     engine:Mapped["Engine"] = relationship(back_populates="motor_comps")
+
+Sessionlocal = sessionmaker(bind=engine)
 try:
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     print("Successfully created all tables")
 except Exception as e:

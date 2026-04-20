@@ -1,11 +1,12 @@
 import customtkinter
 
-class RegisterView(customtkinter.CTk):
-    def __init__(self):
-        super().__init__()
+class RegisterView(customtkinter.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master)
 
-        self.title("Register")
-        self.geometry("600x600")
+        self.error_label = customtkinter.CTkLabel(self)
+        self.error_label.pack(side=customtkinter.TOP, fill=customtkinter.BOTH)
+
         self.username_label = customtkinter.CTkLabel(self, text="Username")
         self.username_label.pack(padx=5, pady=5)
 
@@ -30,8 +31,8 @@ class RegisterView(customtkinter.CTk):
         self.phone = customtkinter.CTkEntry(self, placeholder_text="Phone Number", width=20, height=5)
         self.phone.pack(padx=5, pady=5,fill="x")
 
+        self.back_button = customtkinter.CTkButton(self,text="Back")
+        self.back_button.pack(padx=5,pady=5)
+
         self.register_button = customtkinter.CTkButton(self,text="Register")
         self.register_button.pack(padx=5,pady=5)
-
-registerView = RegisterView()
-registerView.mainloop()
