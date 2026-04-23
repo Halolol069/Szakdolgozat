@@ -3,8 +3,8 @@ class LoginView(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.registration_label = customtkinter.CTkLabel(self)
-        self.registration_label.pack()
+        self.registration_label = customtkinter.CTkLabel(self,text='')
+        self.registration_label.pack(fill='x')
 
         self.username_label = customtkinter.CTkLabel(self,text="Username:")
         self.username_label.pack(padx=4, pady=5, fill="x")

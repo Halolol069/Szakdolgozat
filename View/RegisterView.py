@@ -4,7 +4,7 @@ class RegisterView(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.error_label = customtkinter.CTkLabel(self)
+        self.error_label = customtkinter.CTkLabel(self, text='')
         self.error_label.pack(side=customtkinter.TOP, fill=customtkinter.BOTH)
 
         self.username_label = customtkinter.CTkLabel(self, text="Username")
@@ -36,3 +36,8 @@ class RegisterView(customtkinter.CTkFrame):
 
         self.register_button = customtkinter.CTkButton(self,text="Register")
         self.register_button.pack(padx=5,pady=5)
+
+    def clear_form(self):
+        datas = [self.username, self.password, self.email, self.phone]
+        for data in datas:
+            data.delete(0, "end")

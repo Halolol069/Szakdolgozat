@@ -135,10 +135,19 @@ class MotorCompatibility(Base):
     engine:Mapped["Engine"] = relationship(back_populates="motor_comps")
 
 Sessionlocal = sessionmaker(bind=engine)
+def seed_roles():
+    with Sessionlocal() as session:
+        user_role = session.get(Role,1)
+        if user_role is None:
+            user_role = Role(id=1,name="User")
+            session.add(user_role)
+            session.commit()
+            session.refresh(user_role)
+        return user_role
 try:
-    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+    #Base.metadata.drop_all(engine)
+    seed_roles()
     print("Successfully created all tables")
 except Exception as e:
     print("Failed to create tables", e)
-
