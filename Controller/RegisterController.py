@@ -1,3 +1,5 @@
+import bcrypt
+
 from Model.database import User, Sessionlocal
 class RegisterController:
     def __init__(self,main_app, view):
@@ -37,7 +39,10 @@ class RegisterController:
         entered_password = self.view.password.get()
         entered_email = self.view.email.get()
         entered_phone = self.view.phone.get()
-        self.user = User(name=entered_name, password=entered_password, email=entered_email,phone=entered_phone,role_id=1)
+        hashed_password = bcrypt.hashpw(entered_password.encode("utf-8"), bcrypt.gensalt())
+
+        self.user = User(name=entered_name, password=hashed_password.decode("utf-8"), email=entered_email,phone=entered_phone,role_id=1)
+
         with Sessionlocal() as session:
             try:
                 session.add(self.user)
