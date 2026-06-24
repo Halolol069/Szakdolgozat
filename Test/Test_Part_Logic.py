@@ -26,6 +26,7 @@ class DummyView:
     def __init__(self):
         self.add_button = DummyButton()
         self.delete_button = DummyButton()
+        self.edit_button = DummyButton()
         self.tree = DummyTree()
 
 class DummyApp:
@@ -44,12 +45,24 @@ class DummyAddView:
         self.type = DummyVar("Fék")
         self.price = DummyVar(1000)
         self.amount = DummyVar(5)
-        self.manufacturer_id = DummyVar(1)
+        self.manufacturer_cb = DummyVar("Teszt Gyártó")
 
     def destroy(self):
         pass
-class TestPartLogic(unittest.TestCase):
 
+class DummyEditView:
+    def __init__(self):
+        self.part_number = DummyVar("TEST-CREATE-001")
+        self.name = DummyVar("Új Fék")
+        self.type = DummyVar("Fék")
+        self.price = DummyVar(6000)
+        self.amount = DummyVar(5)
+        self.manufacturer_cb = DummyVar("Teszt Gyártó")
+
+    def destroy(self):
+        pass
+
+class TestPartLogic(unittest.TestCase):
     def test_read_part(self):
         with Sessionlocal() as session:
             test_part = Parts(
@@ -122,6 +135,37 @@ class TestPartLogic(unittest.TestCase):
         with Sessionlocal() as session:
             deleted_part = session.query(Parts).filter(Parts.id == part_id).first()
             self.assertIsNone(deleted_part, "Még benne van az alkatrész törlés után!")
+
+    def test_update_part(self):
+        with Sessionlocal() as session:
+            test_part = Parts(
+                part_number="TEST-DELETE-001",
+                name="Fek",
+                type="Fekrendszer",
+                price=5000,
+                amount=1,
+                min_amount=5,
+                max_amount=50,
+                manufacturer_id=1
+            )
+            session.add(test_part)
+            session.commit()
+            part_id = test_part.id
+
+            mock_app = DummyApp()
+            mock_view = DummyView()
+            controller = PartsController(mock_app, mock_view)
+
+            controller.edit_view = DummyEditView()
+            controller.selected_edit_id = part_id
+            controller.manufacturer_map = {"Teszt Gyártó": 1}
+
+            controller.save_edited_part()
+
+            with Sessionlocal() as session:
+                updated_part = session.query(Parts).filter(Parts.id == part_id).first()
+                self.assertEqual(updated_part.name, "Új Fék", "A név nem frissült az adatbázisban!")
+                self.assertEqual(updated_part.price, 6000, "Az ár nem frissült az adatbázisban!")
 
 if __name__ == '__main__':
     unittest.main()

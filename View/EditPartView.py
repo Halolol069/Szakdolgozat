@@ -1,0 +1,35 @@
+import customtkinter
+
+class EditPartView(customtkinter.CTkToplevel):
+    def __init__(self, master):
+        super().__init__(master)
+
+        self.title("Alkatrész Szerkesztése")
+        self.geometry("400x550")
+
+        self.attributes("-topmost", True)
+
+        self.title_label = customtkinter.CTkLabel(self, text="Alkatrész Szerkesztése",
+                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
+        self.title_label.pack(pady=(20, 10))
+
+        self.part_number = customtkinter.CTkEntry(self, placeholder_text="Cikkszám")
+        self.part_number.pack(pady=10, padx=20, fill="x")
+
+        self.name = customtkinter.CTkEntry(self, placeholder_text="Megnevezés")
+        self.name.pack(pady=10, padx=20, fill="x")
+
+        self.type = customtkinter.CTkEntry(self, placeholder_text="Típus")
+        self.type.pack(pady=10, padx=20, fill="x")
+
+        self.price = customtkinter.CTkEntry(self, placeholder_text="Ár (Ft)")
+        self.price.pack(pady=10, padx=20, fill="x")
+
+        self.amount = customtkinter.CTkEntry(self, placeholder_text="Készlet mennyiség")
+        self.amount.pack(pady=10, padx=20, fill="x")
+
+        self.manufacturer_id = customtkinter.CTkEntry(self, placeholder_text="Gyártó ID")
+        self.manufacturer_id.pack(pady=10, padx=20, fill="x")
+
+        self.save_button = customtkinter.CTkButton(self, text="Módosítások Mentése", fg_color="#1f538d", hover_color="#14375e")
+        self.save_button.pack(pady=30)
