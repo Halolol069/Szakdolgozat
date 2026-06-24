@@ -8,6 +8,7 @@ class PartsController:
         self.view = view
 
         self.view.add_button.configure(command=self.open_add_popup)
+        self.view.delete_button.configure(command=self.delete_selected_part)
 
         self.load_parts()
 
@@ -68,3 +69,38 @@ class PartsController:
             except Exception as e:
                 session.rollback()
                 print("Hiba történt a mentés során:", e)
+
+    def delete_selected_part(self):
+        choosed_line = self.view.tree.selection()
+
+        if not choosed_line:
+            print("Kérlek, válassz ki egy alkatrészt a törléshez!")
+            return
+
+        successful_delete = False
+
+        for line in choosed_line:
+            line_datas = self.view.tree.item(line)
+            part_id = line_datas['values'][0]
+
+            if self.delete_part(part_id):
+                successful_delete = True
+                print(f"Sikeresen törölted a(z) {part_id} azonosítójú alkatrészt!")
+
+        if successful_delete:
+            self.load_parts()
+
+    def delete_part(self, part_id):
+        with Sessionlocal() as session:
+            try:
+                part_to_delete = session.query(Parts).filter(Parts.id == part_id).first()
+                if part_to_delete:
+                    session.delete(part_to_delete)
+                    session.commit()
+                    return True
+                else:
+                    return False
+            except Exception as e:
+                session.rollback()
+                print("Hiba történt a törlés során: ",e)
+                return False
