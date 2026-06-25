@@ -12,6 +12,9 @@ class PartsController:
         self.view.delete_button.configure(command=self.delete_selected_part)
         self.view.edit_button.configure(command=self.open_edit_popup)
 
+        self.view.tree.tag_configure("low_stock",background="red", foreground="white")
+        self.view.tree.tag_configure("high_stock", background="green", foreground="white")
+
         self.selected_edit_id = None
         self.load_parts()
 
@@ -23,7 +26,11 @@ class PartsController:
             try:
                 parts_list = session.query(Parts).all()
                 for part in parts_list:
-                    self.view.tree.insert("", "end", values=(part.id, part.part_number, part.name, part.type, part.price, part.amount))
+                    if part.amount > part.max_amount:
+                        line_tag = ("low_stock",)
+                    else:
+                        line_tag = ("normal",)
+                    self.view.tree.insert("", "end", values=(part.id, part.part_number, part.name, part.type, part.price, part.amount),tags=line_tag)
 
             except Exception as e:
                 print("Hiba történt az adatbázis lekérdezéskor: ",e)
@@ -40,7 +47,7 @@ class PartsController:
         try:
             price = int(self.add_view.price.get())
             amount = int(self.add_view.amount.get())
-            man_id = int(self.add_view.manufacturer_cb.get())
+            man_id = int(self.add_view.manufacturer_id.get())
         except ValueError:
             print("Az ár, készlet és gyártó ID mezőkbe csak számot írhatsz!")
             return
@@ -100,7 +107,7 @@ class PartsController:
             self.edit_view.type.insert(0, part_to_edit.type)
             self.edit_view.price.insert(0, str(part_to_edit.price))
             self.edit_view.amount.insert(0, str(part_to_edit.amount))
-            self.edit_view.manufacturer_cb.insert(0, str(part_to_edit.manufacturer_id))
+            self.edit_view.manufacturer_id.insert(0, str(part_to_edit.manufacturer_id))
 
             self.edit_view.save_button.configure(command=self.save_edited_part)
 
@@ -109,12 +116,10 @@ class PartsController:
         name = self.edit_view.name.get()
         part_type = self.edit_view.type.get()
 
-        choosed_factory_name = self.edit_view.manufacturer_cb.get()
-
         try:
             price = int(self.edit_view.price.get())
             amount = int(self.edit_view.amount.get())
-            man_id = self.manufacturer_map.get(choosed_factory_name)
+            man_id = int(self.edit_view.manufacturer_id.get())
             if not man_id:
                 print("Érvénytelen gyártó!")
                 return

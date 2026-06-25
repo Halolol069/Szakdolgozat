@@ -21,7 +21,8 @@ class DummyTree:
     def insert(self,*args, **kwargs):
         if 'values' in kwargs:
             self.inserted_rows.append(kwargs['values'])
-
+    def tag_configure(self, tagname, **kwargs):
+        pass
 class DummyView:
     def __init__(self):
         self.add_button = DummyButton()
@@ -45,7 +46,7 @@ class DummyAddView:
         self.type = DummyVar("Fék")
         self.price = DummyVar(1000)
         self.amount = DummyVar(5)
-        self.manufacturer_cb = DummyVar("Teszt Gyártó")
+        self.manufacturer_id = DummyVar(1)
 
     def destroy(self):
         pass
@@ -57,7 +58,7 @@ class DummyEditView:
         self.type = DummyVar("Fék")
         self.price = DummyVar(6000)
         self.amount = DummyVar(5)
-        self.manufacturer_cb = DummyVar("Teszt Gyártó")
+        self.manufacturer_id = DummyVar(1)
 
     def destroy(self):
         pass
@@ -158,7 +159,6 @@ class TestPartLogic(unittest.TestCase):
 
             controller.edit_view = DummyEditView()
             controller.selected_edit_id = part_id
-            controller.manufacturer_map = {"Teszt Gyártó": 1}
 
             controller.save_edited_part()
 
