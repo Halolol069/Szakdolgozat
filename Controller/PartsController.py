@@ -26,8 +26,10 @@ class PartsController:
             try:
                 parts_list = session.query(Parts).all()
                 for part in parts_list:
-                    if part.amount > part.max_amount:
+                    if part.amount < part.min_amount:
                         line_tag = ("low_stock",)
+                    elif part.amount >= part.max_amount:
+                        line_tag = ("high_stock",)
                     else:
                         line_tag = ("normal",)
                     self.view.tree.insert("", "end", values=(part.id, part.part_number, part.name, part.type, part.price, part.amount),tags=line_tag)
@@ -63,7 +65,7 @@ class PartsController:
             price=price,
             amount=amount,
             min_amount=5,
-            max_amount=50,
+            max_amount=20,
             manufacturer_id=man_id
         )
 

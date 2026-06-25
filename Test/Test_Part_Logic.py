@@ -18,11 +18,14 @@ class DummyTree:
 
     def delete(self,*args, **kwargs):
         pass
+
     def insert(self,*args, **kwargs):
         if 'values' in kwargs:
             self.inserted_rows.append(kwargs['values'])
+
     def tag_configure(self, tagname, **kwargs):
         pass
+
 class DummyView:
     def __init__(self):
         self.add_button = DummyButton()
