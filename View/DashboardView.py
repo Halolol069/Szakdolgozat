@@ -22,6 +22,8 @@ class DashboardView(customtkinter.CTkFrame):
                                                      fg_color="red", hover_color="darkred")
         self.logout_button.grid(row=5, column=0, padx=20, pady=20, sticky="s")
 
+        self.back_button = customtkinter.CTkButton(self.sidebar_frame,text="Vissza")
+
         self.main_frame = customtkinter.CTkFrame(self)
         self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
 
