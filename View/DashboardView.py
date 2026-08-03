@@ -18,6 +18,9 @@ class DashboardView(customtkinter.CTkFrame):
         self.parts_button = customtkinter.CTkButton(self.sidebar_frame, text="Alkatrészek")
         self.parts_button.grid(row=1, column=0, padx=20, pady=10)
 
+        self.compatibility_button = customtkinter.CTkButton(self.sidebar_frame, text="Kompatibilitás")
+        self.compatibility_button.grid(row=2, column=0, padx=20, pady=10)
+
         self.logout_button = customtkinter.CTkButton(self.sidebar_frame, text="Kijelentkezés",
                                                      fg_color="red", hover_color="darkred")
         self.logout_button.grid(row=5, column=0, padx=20, pady=20, sticky="s")

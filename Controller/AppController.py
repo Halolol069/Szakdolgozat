@@ -1,8 +1,10 @@
 import  View.MainView as MainView
 import View.LoginView as LoginView
 import View.RegisterView as RegisterView
+import View.CompatibilityView as CompatibilityView
 import RegisterController as RegisterController
 import LoginController as LoginController
+import CompatibilityController as CompatibilityController
 from Controller import DashboardController
 from View import DashboardView
 
@@ -13,8 +15,10 @@ class Controller:
         self.login = LoginView.LoginView(self.app)
         self.register = RegisterView.RegisterView(self.app)
         self.dashboard = DashboardView.DashboardView(self.app)
+        self.compatibility = CompatibilityView.CompatibilityView(self.app)
         self.register_controller = RegisterController.RegisterController(self,self.register)
         self.login_controller = LoginController.LoginController(self,self.login)
+        self.compatibility_controller = CompatibilityController.CompatibilityController(self,self.compatibility)
         self.dashboard_controller = DashboardController.DashboardController(self, self.dashboard)
         self.login.register_button.configure(command=self.show_register)
 
@@ -25,6 +29,9 @@ class Controller:
 
     def show_login(self):
         self.app.show_frame(self.login)
+
+    def show_compatibility(self):
+        self.app.show_frame(self.compatibility)
 
     def show_dashboard(self):
         self.app.show_frame(self.dashboard)

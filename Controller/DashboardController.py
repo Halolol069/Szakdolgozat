@@ -2,6 +2,10 @@ import View.PartsView as PartView
 import PartsController as PartsController
 import customtkinter
 
+import View.CompatibilityView as CompatibilitiesView
+import CompatibilityController as CompatibilitiesController
+
+
 class DashboardController:
     def __init__(self, main_app, view):
         self.main_app = main_app
@@ -10,6 +14,8 @@ class DashboardController:
         self.view.logout_button.configure(command=self.logout)
 
         self.view.parts_button.configure(command=self.show_parts)
+
+        self.view.compatibility_button.configure(command=self.show_compatibility)
 
         self.view.back_button.configure(command=self.back)
 
@@ -37,3 +43,10 @@ class DashboardController:
         self.view.welcome_label.pack(pady=50)
         self.view.back_button.grid_remove()
 
+    def show_compatibility(self):
+        for widget in self.view.main_frame.winfo_children():
+            widget.destroy()
+        compatibility_view = CompatibilitiesView.CompatibilityView(self.view.main_frame)
+        compatibility_view.pack(fill="both", expand=True)
+        compatibility_controller = CompatibilitiesController.CompatibilityController(self.main_app, compatibility_view)
+        self.view.back_button.grid(row=6, column=0, padx=20, pady=20, sticky="s")
