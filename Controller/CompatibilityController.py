@@ -1,10 +1,11 @@
-from Model.database import Sessionlocal, Manufacturer, Modell, Parts
+from Model.database import Sessionlocal, Manufacturer, Modell, Parts, Compatibility, Engine
 
 class CompatibilityController:
     def __init__(self, main_app, view):
         self.main_app = main_app
         self.view = view
         self.load_manufacturers()
+        self.load_all_parts()
         self.view.save_button.configure(command=self.save_compatibility)
 
     def load_manufacturers(self):
@@ -23,7 +24,7 @@ class CompatibilityController:
             self.model_list = []
             for elements in self.manufacturer.models:
                 self.model_list.append(elements.name)
-            self.view.modell_dropdown.configure(values=self.model_list, command=self.load_engines)
+            self.view.model_dropdown.configure(values=self.model_list, command=self.load_engines)
 
     def load_engines(self, selected_model):
         with Sessionlocal() as session:
@@ -41,7 +42,11 @@ class CompatibilityController:
             try:
                 parts_list = session.query(Parts).all()
                 for parts in parts_list:
-                    self.view.parts_tree.insert(parent="",index="end",values=(parts.name, parts.manufacturer.name, parts.model.name, parts.engine.name))
+                    if parts.manufacturer is None:
+                        man_name = "None"
+                    else:
+                        man_name = parts.manufacturer.name
+                    self.view.parts_tree.insert(parent="",index="end",values=(parts.name, man_name, "", ""))
             except Exception as e:
                 print("Failed to load all parts.", e)
 
@@ -50,16 +55,18 @@ class CompatibilityController:
             self.selected_parts = self.view.parts_tree.selection()
             vehicle_data = {
                 "manufacturer": self.view.manufacturer_dropdown.get(),
-                "model": self.view.modell_dropdown.get(),
+                "model": self.view.model_dropdown.get(),
                 "engine":self.view.engine_dropdown.get()
             }
             for part_id in self.selected_parts:
                 line_data = self.view.parts_tree.item(part_id, "values")
                 print(f"{line_data}, {vehicle_data}")
                 part = session.query(Parts).filter_by(name=line_data[0]).first()
-                part.manufacturer = vehicle_data["manufacturer"]
-                part.model = vehicle_data["model"]
-                part.engine = vehicle_data["engine"]
+                model = session.query(Modell).filter_by(name=vehicle_data["model"]).first()
+                engine = session.query(Engine).filter_by(engine_code=vehicle_data["engine"]).first()
+                new_compatibility = Compatibility(part=part,engine=engine,modell=model)
+                session.add(new_compatibility)
+                self.view.parts_tree.selection_remove(part_id)
             session.commit()
             if not self.selected_parts:
                 self.view.save_button_label.configure(text="Select parts to save failed",text_color="red")
