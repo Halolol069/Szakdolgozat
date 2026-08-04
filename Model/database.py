@@ -1,6 +1,6 @@
 import datetime
 import os
-from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, MetaData, Boolean
+from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
@@ -67,6 +67,7 @@ class Fuel(Base):
 class Engine(Base):
     __tablename__ = "engines"
     id:Mapped[int] = mapped_column(primary_key=True)
+    engine_code:Mapped[str] = mapped_column(String(50))
     manufacturer_id:Mapped[int] = mapped_column(ForeignKey("manufacturers.id"))
     manufacturer:Mapped["Manufacturer"] = relationship(back_populates="engines")
     horse_power:Mapped[int] = mapped_column(Integer)
@@ -75,6 +76,7 @@ class Engine(Base):
     fuel:Mapped["Fuel"] = relationship(back_populates="engines")
     motor_comps:Mapped[List["MotorCompatibility"]] = relationship(back_populates="engine",cascade="all, delete-orphan")
     compatibilities:Mapped[List["Compatibility"]] = relationship(back_populates="engine", cascade="all, delete-orphan")
+
 class Modell(Base):
     __tablename__ = "models"
     id:Mapped[int] = mapped_column(primary_key=True)
@@ -85,6 +87,7 @@ class Modell(Base):
     date:Mapped[datetime.datetime] = mapped_column(DateTime)
     vehicles:Mapped[List["Vehicle"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
     types:Mapped[List["Type"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
+    compatibilities:Mapped[List["Compatibility"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
     motor_comps:Mapped[List["MotorCompatibility"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
 
 class VehicleType(Base):
@@ -123,6 +126,8 @@ class Compatibility(Base):
     id:Mapped[int] = mapped_column(primary_key=True)
     part_id:Mapped[int] = mapped_column(ForeignKey("parts.id"))
     part:Mapped["Parts"] = relationship(back_populates="compatibilities")
+    modell_id:Mapped[int] = mapped_column(ForeignKey("models.id"))
+    modell:Mapped["Modell"] = relationship(back_populates="compatibilities")
     engine_id:Mapped[int] = mapped_column(ForeignKey("engines.id"))
     engine:Mapped["Engine"] = relationship(back_populates="compatibilities")
 
@@ -144,6 +149,19 @@ def seed_roles():
             session.commit()
             session.refresh(user_role)
         return user_role
+def seed_examples():
+    with Sessionlocal() as session:
+        session.add(Manufacturer(id=1, name="Ford"))
+        session.add(Modell(id=1, name="Mustang",manufacturer_id = 1))
+        session.add(Fuel(id=1, name="Gasoline"))
+        session.add(Engine(id=1,horse_power=500, ccc=5000, manufacturer_id=1,fuel_id=1))
+        session.add(Manufacturer(id=2, name="Ferrari"))
+        session.add(Modell(id=2, name="Tessa Rosa", manufacturer_id = 2))
+        session.add(Fuel(id=2, name="Sport Fuel"))
+        session.add(Engine(id=2,horse_power=690,ccc=6000, manufacturer_id=2, fuel_id=2))
+        session.commit()
+
+
 try:
     Base.metadata.create_all(engine)
     #Base.metadata.drop_all(engine)
