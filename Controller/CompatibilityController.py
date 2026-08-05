@@ -1,28 +1,28 @@
-from Model.database import Sessionlocal, Manufacturer, Modell, Parts, Compatibility, Engine
+from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine
 
 class CompatibilityController:
     def __init__(self, main_app, view):
         self.main_app = main_app
         self.view = view
-        self.load_manufacturers()
+        self.load_vehiclebrand()
         self.load_all_parts()
         self.view.save_button.configure(command=self.save_compatibility)
 
-    def load_manufacturers(self):
+    def load_vehiclebrand(self):
         with Sessionlocal() as session:
-            self.manufacturer = session.query(Manufacturer).all()
+            self.vehiclebrand = session.query(VehicleBrand).all()
 
-            self.manufacturer_list = []
-            for elements in self.manufacturer:
-                self.manufacturer_list.append(elements.name)
-            self.view.manufacturer_dropdown.configure(values=self.manufacturer_list, command=self.load_models)
+            self.vehiclebrand_list = []
+            for elements in self.vehiclebrand:
+                self.vehiclebrand_list.append(elements.name)
+            self.view.vehiclebrand_dropdown.configure(values=self.vehiclebrand_list, command=self.load_models)
 
     def load_models(self, selected_manufacturer):
         with Sessionlocal() as session:
-            self.manufacturer = session.query(Manufacturer).filter_by(name=selected_manufacturer).first()
+            self.vehiclebrand = session.query(VehicleBrand).filter_by(name=selected_manufacturer).first()
 
             self.model_list = []
-            for elements in self.manufacturer.models:
+            for elements in self.vehiclebrand.models:
                 self.model_list.append(elements.name)
             self.view.model_dropdown.configure(values=self.model_list, command=self.load_engines)
 
@@ -32,7 +32,7 @@ class CompatibilityController:
 
             self.engine_list = []
             for elements in self.model.motor_comps:
-                self.engine_list.append(f"{elements.engine.horse_power}hp, {elements.engine.ccc}ccc")
+                self.engine_list.append(f"{elements.engine.engine_code},{elements.engine.horse_power}hp, {elements.engine.ccc}ccc")
             self.view.engine_dropdown.configure(values=self.engine_list)
 
     def load_all_parts(self):
@@ -54,7 +54,7 @@ class CompatibilityController:
         with Sessionlocal() as session:
             self.selected_parts = self.view.parts_tree.selection()
             vehicle_data = {
-                "manufacturer": self.view.manufacturer_dropdown.get(),
+                "vehiclebrand": self.view.vehiclebrand_dropdown.get(),
                 "model": self.view.model_dropdown.get(),
                 "engine":self.view.engine_dropdown.get()
             }
