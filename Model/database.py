@@ -33,8 +33,14 @@ class Manufacturer(Base):
     id:Mapped[int] = mapped_column(primary_key=True)
     name:Mapped[str] = mapped_column(String(50))
     parts:Mapped[List["Parts"]] = relationship(back_populates="manufacturer", cascade="all, delete-orphan")
-    engines:Mapped[List["Engine"]] = relationship(back_populates="manufacturer", cascade="all,delete-orphan")
-    models:Mapped[List["Modell"]] = relationship(back_populates="manufacturer", cascade="all,delete-orphan")
+
+class VehicleBrand(Base):
+    __tablename__ = "vehiclebrands"
+    id:Mapped[int] = mapped_column(primary_key=True)
+    name:Mapped[str] = mapped_column(unique=True)
+    country:Mapped[str] = mapped_column(String(100))
+    models:Mapped[List["Modell"]] = relationship(back_populates="vehicleBrand", cascade="all,delete-orphan")
+    engines:Mapped[List["Engine"]] = relationship(back_populates="vehicleBrand", cascade="all,delete-orphan")
 
 class SellHeader(Base):
     __tablename__ = "sell_headers"
@@ -68,8 +74,8 @@ class Engine(Base):
     __tablename__ = "engines"
     id:Mapped[int] = mapped_column(primary_key=True)
     engine_code:Mapped[str] = mapped_column(String(50))
-    manufacturer_id:Mapped[int] = mapped_column(ForeignKey("manufacturers.id"))
-    manufacturer:Mapped["Manufacturer"] = relationship(back_populates="engines")
+    vehicleBrand_id:Mapped[int] = mapped_column(ForeignKey("vehiclebrands.id"))
+    vehicleBrand:Mapped["VehicleBrand"] = relationship(back_populates="engines")
     horse_power:Mapped[int] = mapped_column(Integer)
     ccc:Mapped[int] = mapped_column(Integer)
     fuel_id:Mapped[int] = mapped_column(ForeignKey("fuels.id"))
@@ -80,8 +86,8 @@ class Engine(Base):
 class Modell(Base):
     __tablename__ = "models"
     id:Mapped[int] = mapped_column(primary_key=True)
-    manufacturer_id:Mapped[int] = mapped_column(ForeignKey("manufacturers.id"))
-    manufacturer:Mapped["Manufacturer"] = relationship(back_populates="models")
+    vehicleBrand_id:Mapped[int] = mapped_column(ForeignKey("vehiclebrands.id"))
+    vehicleBrand:Mapped["VehicleBrand"] = relationship(back_populates="models")
     name:Mapped[str] = mapped_column(String(50))
     generation:Mapped[int] = mapped_column(Integer)
     date:Mapped[datetime.datetime] = mapped_column(DateTime)
@@ -151,21 +157,48 @@ def seed_roles():
         return user_role
 def seed_examples():
     with Sessionlocal() as session:
-        session.add(Manufacturer(id=1, name="Ford"))
-        session.add(Modell(id=1, name="Mustang",manufacturer_id = 1))
+        if session.query(VehicleBrand).count() > 0:
+            print("Examples already seeded, skipping...")
+            return
+        session.add(VehicleBrand(id=1, name="Ford",country="USA"))
+        session.add(VehicleBrand(id=2, name="Ferrari",country="Italia"))
+        session.add(VehicleBrand(id=3, name="Opel", country="Germany"))
+        session.add(VehicleBrand(id=4, name="Renault", country="France"))
+
+        session.add(Manufacturer(id=1, name="Lemförder"))
+        session.add(Manufacturer(id=2, name="Continental"))
+        session.add(Manufacturer(id=3, name="MANN-FILTER"))
+        session.add(Manufacturer(id=4, name="Valeo"))
+        session.add(Manufacturer(id=5, name="Bosch"))
+        session.add(Manufacturer(id=6, name="ZF"))
+
+        session.add(Modell(id=1, name="Mustang", vehicleBrand_id=1, generation=6, date=datetime.datetime(2015, 1, 1)))
+        session.add(Modell(id=2, name="Tessa Rosa", vehicleBrand_id=2, generation=1,date=datetime.datetime(1984, 1, 1)))
+        session.add(Modell(id=3, name="Corsa", vehicleBrand_id=3, generation=5, date=datetime.datetime(2019, 1, 1)))
+        session.add(Modell(id=4, name="Clio", vehicleBrand_id=4, generation=5, date=datetime.datetime(2019, 1, 1)))
+
+        session.add(Engine(id=1,engine_code="coyote v8",horse_power=500, ccc=5000, vehicleBrand_id=1,fuel_id=1))
+        session.add(Engine(id=2,engine_code="italian v10",horse_power=690,ccc=6000, vehicleBrand_id=2, fuel_id=2))
+
+        session.add(MotorCompatibility(id=1,modell_id=1, engine_id=1 ))
+        session.add(MotorCompatibility(id=2,modell_id=2, engine_id=2 ))
+
         session.add(Fuel(id=1, name="Gasoline"))
-        session.add(Engine(id=1,horse_power=500, ccc=5000, manufacturer_id=1,fuel_id=1))
-        session.add(Manufacturer(id=2, name="Ferrari"))
-        session.add(Modell(id=2, name="Tessa Rosa", manufacturer_id = 2))
         session.add(Fuel(id=2, name="Sport Fuel"))
-        session.add(Engine(id=2,horse_power=690,ccc=6000, manufacturer_id=2, fuel_id=2))
+
+
+        session.add(Parts(id=1, part_number="MNF-001",manufacturer_id=1,name="Fékbetét",type="Fékrendszer",price=5000,amount=30,min_amount=2, max_amount=30))
+        session.add(Parts(id=2, part_number="BSC-002",manufacturer_id=5,name="Fékbetét",type="Fékrendszer",price=5000,amount=30,min_amount=2, max_amount=30))
+        session.add(Parts(id=3, part_number="VLO-003",manufacturer_id=4,name="Fékbetét",type="Fékrendszer",price=5000,amount=30,min_amount=2, max_amount=30))
+
         session.commit()
 
 
 try:
-    Base.metadata.create_all(engine)
     #Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
     seed_roles()
+    seed_examples()
     print("Successfully created all tables")
 except Exception as e:
     print("Failed to create tables", e)
