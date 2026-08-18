@@ -15,6 +15,7 @@ class DummyDropDown:
 class DummyTree:
     def __init__(self):
         self.removed_item = []
+        self.inserted_items = []
     def selection(self):
         return ["Test_Part_ID"]
 
@@ -28,6 +29,13 @@ class DummyTree:
 
     def get_children(self):
         return []
+
+    def delete(self,item):
+        pass
+
+    def insert(self, parent, index, values):
+        self.inserted_items.append(values)
+
 class DummyVar:
     def __init__(self, value):
         self.value = value
@@ -75,3 +83,25 @@ class Test_Compatibility_Logic(unittest.TestCase):
                 session.query(Parts).filter_by(id=6662).delete()
                 session.query(VehicleBrand).filter_by(id=6661).delete()
                 session.commit()
+
+    def test_load_all_parts(self):
+        with Sessionlocal() as session:
+            test_part = Parts(id=6662,name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék', price=210,
+                              amount=1, min_amount=1, max_amount=10)
+            session.add(test_part)
+            session.commit()
+            try:
+                mock_app = DummyApp()
+                mock_view = DummyView()
+                controller = CompatibilityController(mock_app, mock_view)
+
+                controller.load_all_parts()
+
+                inserted_names = [item[0] for item in mock_view.parts_tree.inserted_items]
+                self.assertIn("TestFek", inserted_names, "Az alkatrész nem töltődött be a táblázatba!")
+
+            finally:
+                with Sessionlocal() as session:
+                    session.query(Parts).filter_by(id=6662).delete()
+                    session.commit()
+
