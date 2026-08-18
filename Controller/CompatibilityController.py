@@ -32,7 +32,7 @@ class CompatibilityController:
 
             self.engine_list = []
             for elements in self.model.motor_comps:
-                self.engine_list.append(f"{elements.engine.engine_code},{elements.engine.horse_power}hp, {elements.engine.ccc}ccc")
+                self.engine_list.append(f"{elements.engine.engine_code}")
             self.view.engine_dropdown.configure(values=self.engine_list)
 
     def load_all_parts(self):
