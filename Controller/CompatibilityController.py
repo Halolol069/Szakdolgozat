@@ -17,9 +17,9 @@ class CompatibilityController:
                 self.vehiclebrand_list.append(elements.name)
             self.view.vehiclebrand_dropdown.configure(values=self.vehiclebrand_list, command=self.load_models)
 
-    def load_models(self, selected_manufacturer):
+    def load_models(self, selected_brand):
         with Sessionlocal() as session:
-            self.vehiclebrand = session.query(VehicleBrand).filter_by(name=selected_manufacturer).first()
+            self.vehiclebrand = session.query(VehicleBrand).filter_by(name=selected_brand).first()
 
             self.model_list = []
             for elements in self.vehiclebrand.models:
