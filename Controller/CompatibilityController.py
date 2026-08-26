@@ -73,4 +73,8 @@ class CompatibilityController:
             else:
                 self.view.save_button_label.configure(text="Successful save", text_color="green")
 
+    def gets_parts_by_engine(self,engine_id):
+        with Sessionlocal() as session:
+            return session.query(Parts).join(Compatibility).join(Engine).filter(Compatibility.engine_id == engine_id).all()
+
 
