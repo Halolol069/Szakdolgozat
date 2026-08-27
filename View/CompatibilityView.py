@@ -2,7 +2,16 @@ from tkinter import ttk
 
 import customtkinter
 
+from Controller.CompatibilityController import CompatibilityController
+
+
 class CompatibilityView(customtkinter.CTkFrame):
+    def search_action(self):
+        self.selected_engine = self.engine_dropdown.get()
+        self.engine_mapping = {"V8": 5552, "1.9 TDI": 5553}
+        engine_id = self.engine_mapping[self.selected_engine]
+        self.controller.gets_parts_by_engine(engine_id)
+
     def __init__(self, master):
         super().__init__(master)
 
@@ -37,5 +46,9 @@ class CompatibilityView(customtkinter.CTkFrame):
         self.save_button.pack(side="left", padx=20, pady=20)
         self.save_button_label = customtkinter.CTkLabel(self.show_parts, text="")
         self.save_button_label.pack(side="left", padx=20, pady=20)
+        self.search_button = customtkinter.CTkButton(master=self.show_parts, text="Search", command=self.search_action)
+        self.search_button.pack(side="left", padx=20, pady=20)
+        self.search_button_label = customtkinter.CTkLabel(self.show_parts, text="")
+        self.search_button_label.pack(side="left", padx=20, pady=20)
         self.show_parts.pack(fill="both",side="right", expand=True)
 

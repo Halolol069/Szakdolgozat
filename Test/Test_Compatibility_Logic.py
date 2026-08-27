@@ -4,6 +4,7 @@ from Controller.CompatibilityController import CompatibilityController
 from Model.database import Modell, Parts, Engine, Sessionlocal, VehicleBrand, Compatibility, MotorCompatibility, \
     Manufacturer
 from Test.Test_Part_Logic import DummyApp
+from View.CompatibilityView import CompatibilityView
 
 
 class DummyDropDown:
@@ -54,9 +55,16 @@ class DummyView:
         self.engine_dropdown = DummyVar("Engine")
         self.save_button = DummyDropDown()
         self.save_button_label = DummyDropDown()
+        self.search_button = DummyDropDown()
+        self.search_button_label = DummyDropDown()
         self.parts_tree = DummyTree()
 
+class MockController:
+    def __init__(self):
+        self.received_engine = None
 
+    def gets_parts_by_engine(self,engine_id):
+        self.received_engine = engine_id
 class Test_Compatibility_Logic(unittest.TestCase):
     def test_save_compatibility(self):
         with Sessionlocal() as session:
@@ -206,5 +214,17 @@ class Test_Compatibility_Logic(unittest.TestCase):
                     session.query(Modell).filter_by(id=5555).delete()
                     session.query(VehicleBrand).filter_by(id=5556).delete()
                     session.commit()
+
+    def test_search_actions(self):
+        mock_controller = MockController()
+
+        real_view = CompatibilityView(master = None)
+        real_view.controller = mock_controller
+        real_view.engine_mapping = {"V8": 5552}
+
+        real_view.engine_dropdown.set(value="V8")
+        real_view.search_action()
+
+        self.assertEqual(5552, mock_controller.received_engine , "The engine code is not same")
 
 
