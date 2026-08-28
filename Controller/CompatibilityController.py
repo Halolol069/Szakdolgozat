@@ -4,6 +4,7 @@ class CompatibilityController:
     def __init__(self, main_app, view):
         self.main_app = main_app
         self.view = view
+        self.view.controller = self
         self.load_vehiclebrand()
         self.load_all_parts()
         self.view.save_button.configure(command=self.save_compatibility)
@@ -73,8 +74,20 @@ class CompatibilityController:
             else:
                 self.view.save_button_label.configure(text="Successful save", text_color="green")
 
-    def gets_parts_by_engine(self,engine_id):
+    def gets_parts_by_engine(self,engine_name):
+        for parts in self.view.parts_tree.get_children():
+                self.view.parts_tree.delete(parts)
         with Sessionlocal() as session:
-            return session.query(Parts).join(Compatibility).join(Engine).filter(Compatibility.engine_id == engine_id).all()
+            try:
+                part_list = session.query(Parts).join(Compatibility).join(Engine).filter(Engine.engine_code == engine_name).all()
+                for parts in part_list:
+                    if parts.manufacturer is None:
+                        man_name = "None"
+                    else:
+                        man_name = parts.manufacturer.name
+                    self.view.parts_tree.insert(parent="", index="end", values=(parts.name,man_name,parts.type,parts.price))
+            except Exception as e:
+                print("Failed to load all parts.", e)
+
 
 

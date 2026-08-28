@@ -220,11 +220,41 @@ class Test_Compatibility_Logic(unittest.TestCase):
 
         real_view = CompatibilityView(master = None)
         real_view.controller = mock_controller
-        real_view.engine_mapping = {"V8": 5552}
+        #real_view.engine_mapping = {"coyote v8": 5552}
 
-        real_view.engine_dropdown.set(value="V8")
+        real_view.engine_dropdown.set(value="coyote v8")
         real_view.search_action()
 
-        self.assertEqual(5552, mock_controller.received_engine , "The engine code is not same")
+        self.assertEqual("coyote v8", mock_controller.received_engine , "The engine code is not same")
 
 
+    def test_search_update_table(self):
+        with Sessionlocal() as session:
+            test_parts = Parts(id=5551, name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék',
+                               price=210,
+                               amount=1, min_amount=1, max_amount=10)
+            test_engines = Engine(id=5552, engine_code='coyote v8', vehicleBrand_id=5556, horse_power=150, ccc=2000,
+                                  fuel_id=1)
+            test_modell = Modell(id=5555, name='Model', vehicleBrand_id=5556, generation=5, date='2021-06-01')
+            test_vehicleBrand = VehicleBrand(id=5556, name='Chevy', country='USA')
+            test_compatibility = Compatibility(id=5553, part_id=5551, modell_id=5555, engine_id=5552)
+            session.add_all([test_parts, test_engines, test_modell, test_vehicleBrand, test_compatibility])
+            session.commit()
+            try:
+                mock_app = DummyApp()
+                mock_view = DummyView()
+                controller = CompatibilityController(mock_app, mock_view)
+
+                mock_view.parts_tree.inserted_items.clear()
+                controller.gets_parts_by_engine("coyote v8")
+                inserted_names = [item[0] for item in mock_view.parts_tree.inserted_items]
+                self.assertIn("TestFek", inserted_names, "Az alkatrész nem töltődött be a táblázatba!")
+
+            finally:
+                with Sessionlocal() as session:
+                    session.query(Compatibility).filter_by(id=5553).delete()
+                    session.query(Parts).filter_by(id=5551).delete()
+                    session.query(Engine).filter_by(id=5552).delete()
+                    session.query(Modell).filter_by(id=5555).delete()
+                    session.query(VehicleBrand).filter_by(id=5556).delete()
+                    session.commit()

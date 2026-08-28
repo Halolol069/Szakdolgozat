@@ -2,15 +2,12 @@ from tkinter import ttk
 
 import customtkinter
 
-from Controller.CompatibilityController import CompatibilityController
 
 
 class CompatibilityView(customtkinter.CTkFrame):
     def search_action(self):
         self.selected_engine = self.engine_dropdown.get()
-        self.engine_mapping = {"V8": 5552, "1.9 TDI": 5553}
-        engine_id = self.engine_mapping[self.selected_engine]
-        self.controller.gets_parts_by_engine(engine_id)
+        self.controller.gets_parts_by_engine(self.selected_engine)
 
     def __init__(self, master):
         super().__init__(master)
