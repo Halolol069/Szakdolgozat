@@ -4,6 +4,9 @@ import customtkinter
 class CompatibilityView(customtkinter.CTkFrame):
     def search_action(self):
         self.selected_engine = self.engine_dropdown.get()
+        if self.selected_engine == "":
+            messagebox.showerror("Error", "Please select an engine")
+            return
         self.controller.gets_parts_by_engine(self.selected_engine)
 
     def show_no_part_msgb(self):

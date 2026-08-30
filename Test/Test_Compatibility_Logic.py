@@ -5,7 +5,7 @@ from Model.database import Modell, Parts, Engine, Sessionlocal, VehicleBrand, Co
     Manufacturer
 from Test.Test_Part_Logic import DummyApp
 from View.CompatibilityView import CompatibilityView
-
+from unittest.mock import patch
 
 class DummyDropDown:
     def __init__(self):
@@ -269,3 +269,15 @@ class Test_Compatibility_Logic(unittest.TestCase):
         controller = CompatibilityController(mock_app, mock_view)
         controller.gets_parts_by_engine("EZNEMMOTOR")
         self.assertEqual(True,mock_view.msgbox_called, "The messagebox appeared")
+
+    @patch('View.CompatibilityView.messagebox.showerror')
+    def test_search_empty(self,mock_showerror):
+        mock_controller = MockController()
+
+        real_view = CompatibilityView(master=None)
+        real_view.controller = mock_controller
+
+        real_view.engine_dropdown.set(value="")
+        real_view.search_action()
+        self.assertTrue(mock_showerror.called, "The messagebox appeared")
+        self.assertEqual(None,mock_controller.received_engine, "No parts for the engine" )
