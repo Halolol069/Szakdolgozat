@@ -208,7 +208,7 @@ class Test_Compatibility_Logic(unittest.TestCase):
                 mock_view = DummyView()
                 controller = CompatibilityController(mock_app, mock_view)
 
-                search_parts = controller.gets_parts_by_engine(5552)
+                search_parts = controller.gets_parts_by_engine("Engine")
                 parts_list = [names.name for names in search_parts]
                 self.assertIn('TestFek', parts_list, "Parts founded")
             finally:

@@ -76,12 +76,12 @@ class CompatibilityController:
             else:
                 self.view.save_button_label.configure(text="Successful save", text_color="green")
 
-    def gets_parts_by_engine(self,engine_name):
+    def gets_parts_by_engine(self,engine_code):
         for parts in self.view.parts_tree.get_children():
                 self.view.parts_tree.delete(parts)
         with Sessionlocal() as session:
             try:
-                part_list = session.query(Parts).join(Compatibility).join(Engine).filter(Engine.engine_code == engine_name).all()
+                part_list = session.query(Parts).join(Compatibility).join(Engine).filter(Engine.engine_code == engine_code).all()
                 if len(part_list) == 0:
                     return self.view.show_no_part_msgb()
                 for parts in part_list:
@@ -90,6 +90,7 @@ class CompatibilityController:
                     else:
                         man_name = parts.manufacturer.name
                     self.view.parts_tree.insert(parent="", index="end", values=(parts.name,man_name,parts.type,parts.price))
+                return part_list
             except Exception as e:
                 print("Failed to load all parts.", e)
 

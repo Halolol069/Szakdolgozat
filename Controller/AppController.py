@@ -2,9 +2,9 @@ import  View.MainView as MainView
 import View.LoginView as LoginView
 import View.RegisterView as RegisterView
 import View.CompatibilityView as CompatibilityView
-import RegisterController as RegisterController
-import LoginController as LoginController
-import CompatibilityController as CompatibilityController
+from Controller import RegisterController as RegisterController
+from Controller import LoginController as LoginController
+from Controller import CompatibilityController as CompatibilityController
 from Controller import DashboardController
 from View import DashboardView
 

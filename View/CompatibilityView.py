@@ -12,6 +12,13 @@ class CompatibilityView(customtkinter.CTkFrame):
     def show_no_part_msgb(self):
         messagebox.showinfo("NoParts", "No parts for the engine")
 
+    def save_action(self):
+        if (self.vehiclebrand_dropdown.get() == "Márka" or self.model_dropdown.get() == "Modell"  or
+                self.engine_dropdown.get() == "Motor"):
+            messagebox.showerror("Error", "Please select a vehicle and model")
+            return
+        self.controller.save_compatibility()
+
     def __init__(self, master):
         super().__init__(master)
 
@@ -42,7 +49,7 @@ class CompatibilityView(customtkinter.CTkFrame):
         self.parts_tree.heading("Model", text="Models")
         self.parts_tree.heading("Engine", text="Engines")
         self.parts_tree.pack(fill="both", expand=True)
-        self.save_button = customtkinter.CTkButton(master=self.show_parts, text="Save")
+        self.save_button = customtkinter.CTkButton(master=self.show_parts, text="Save", command=self.save_action)
         self.save_button.pack(side="left", padx=20, pady=20)
         self.save_button_label = customtkinter.CTkLabel(self.show_parts, text="")
         self.save_button_label.pack(side="left", padx=20, pady=20)

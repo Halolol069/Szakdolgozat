@@ -1,9 +1,9 @@
 import View.PartsView as PartView
-import PartsController as PartsController
+from Controller import PartsController as PartsController
 import customtkinter
 
 import View.CompatibilityView as CompatibilitiesView
-import CompatibilityController as CompatibilitiesController
+from Controller import CompatibilityController as CompatibilitiesController
 
 
 class DashboardController:
