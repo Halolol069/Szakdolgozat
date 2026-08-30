@@ -1,3 +1,5 @@
+from sympy.parsing.sympy_parser import null
+
 from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine
 
 class CompatibilityController:
@@ -80,6 +82,8 @@ class CompatibilityController:
         with Sessionlocal() as session:
             try:
                 part_list = session.query(Parts).join(Compatibility).join(Engine).filter(Engine.engine_code == engine_name).all()
+                if len(part_list) == 0:
+                    return self.view.show_no_part_msgb()
                 for parts in part_list:
                     if parts.manufacturer is None:
                         man_name = "None"

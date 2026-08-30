@@ -57,7 +57,11 @@ class DummyView:
         self.save_button_label = DummyDropDown()
         self.search_button = DummyDropDown()
         self.search_button_label = DummyDropDown()
+        self.msgbox_called = False
         self.parts_tree = DummyTree()
+
+    def show_no_part_msgb(self):
+        self.msgbox_called = True
 
 class MockController:
     def __init__(self):
@@ -65,6 +69,7 @@ class MockController:
 
     def gets_parts_by_engine(self,engine_id):
         self.received_engine = engine_id
+
 class Test_Compatibility_Logic(unittest.TestCase):
     def test_save_compatibility(self):
         with Sessionlocal() as session:
@@ -220,7 +225,6 @@ class Test_Compatibility_Logic(unittest.TestCase):
 
         real_view = CompatibilityView(master = None)
         real_view.controller = mock_controller
-        #real_view.engine_mapping = {"coyote v8": 5552}
 
         real_view.engine_dropdown.set(value="coyote v8")
         real_view.search_action()
@@ -258,3 +262,10 @@ class Test_Compatibility_Logic(unittest.TestCase):
                     session.query(Modell).filter_by(id=5555).delete()
                     session.query(VehicleBrand).filter_by(id=5556).delete()
                     session.commit()
+
+    def test_search_no_found(self):
+        mock_app = DummyApp()
+        mock_view = DummyView()
+        controller = CompatibilityController(mock_app, mock_view)
+        controller.gets_parts_by_engine("EZNEMMOTOR")
+        self.assertEqual(True,mock_view.msgbox_called, "The messagebox appeared")
