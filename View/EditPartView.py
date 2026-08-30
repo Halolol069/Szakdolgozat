@@ -28,6 +28,12 @@ class EditPartView(customtkinter.CTkToplevel):
         self.amount = customtkinter.CTkEntry(self, placeholder_text="Készlet mennyiség")
         self.amount.pack(pady=10, padx=20, fill="x")
 
+        self.min_amount = customtkinter.CTkEntry(self, placeholder_text="Minimum mennyiség")
+        self.min_amount.pack(pady=10, padx=20, fill="x")
+
+        self.max_amount = customtkinter.CTkEntry(self, placeholder_text="Maximum mennyiség")
+        self.max_amount.pack(pady=10, padx=20, fill="x")
+
         self.manufacturer_id = customtkinter.CTkEntry(self, placeholder_text="Gyártó ID")
         self.manufacturer_id.pack(pady=10, padx=20, fill="x")
 

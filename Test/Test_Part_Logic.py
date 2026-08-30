@@ -49,6 +49,8 @@ class DummyAddView:
         self.type = DummyVar("Fék")
         self.price = DummyVar(1000)
         self.amount = DummyVar(5)
+        self.min_amount = DummyVar(5)
+        self.max_amount = DummyVar(5)
         self.manufacturer_id = DummyVar(1)
 
     def destroy(self):
@@ -61,6 +63,8 @@ class DummyEditView:
         self.type = DummyVar("Fék")
         self.price = DummyVar(6000)
         self.amount = DummyVar(5)
+        self.min_amount = DummyVar(5)
+        self.max_amount = DummyVar(5)
         self.manufacturer_id = DummyVar(1)
 
     def destroy(self):

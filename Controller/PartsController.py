@@ -50,6 +50,8 @@ class PartsController:
             price = int(self.add_view.price.get())
             amount = int(self.add_view.amount.get())
             man_id = int(self.add_view.manufacturer_id.get())
+            min_amount = int(self.add_view.min_amount.get())
+            max_amount = int(self.add_view.max_amount.get())
         except ValueError:
             print("Az ár, készlet és gyártó ID mezőkbe csak számot írhatsz!")
             return
@@ -64,8 +66,8 @@ class PartsController:
             type=part_type,
             price=price,
             amount=amount,
-            min_amount=5,
-            max_amount=20,
+            min_amount=min_amount,
+            max_amount=max_amount,
             manufacturer_id=man_id
         )
 
@@ -109,6 +111,8 @@ class PartsController:
             self.edit_view.type.insert(0, part_to_edit.type)
             self.edit_view.price.insert(0, str(part_to_edit.price))
             self.edit_view.amount.insert(0, str(part_to_edit.amount))
+            self.edit_view.min_amount.insert(0, str(part_to_edit.min_amount))
+            self.edit_view.max_amount.insert(0,str(part_to_edit.max_amount))
             self.edit_view.manufacturer_id.insert(0, str(part_to_edit.manufacturer_id))
 
             self.edit_view.save_button.configure(command=self.save_edited_part)
@@ -122,6 +126,8 @@ class PartsController:
             price = int(self.edit_view.price.get())
             amount = int(self.edit_view.amount.get())
             man_id = int(self.edit_view.manufacturer_id.get())
+            min_amount = int(self.edit_view.min_amount.get())
+            max_amount = int(self.edit_view.max_amount.get())
             if not man_id:
                 print("Érvénytelen gyártó!")
                 return
@@ -139,6 +145,8 @@ class PartsController:
             "type": part_type,
             "price": price,
             "amount": amount,
+            "min_amount":min_amount,
+            "max_amount":max_amount,
             "manufacturer_id": man_id
         }
 
@@ -157,8 +165,9 @@ class PartsController:
                     part_to_update.type = new_data['type']
                     part_to_update.price = new_data['price']
                     part_to_update.amount = new_data['amount']
+                    part_to_update.min_amount = new_data['min_amount']
+                    part_to_update.max_amount = new_data['max_amount']
                     part_to_update.manufacturer_id = new_data['manufacturer_id']
-
                     session.commit()
                     return True
                 else:
