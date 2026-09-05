@@ -160,6 +160,17 @@ def seed_examples():
         if session.query(VehicleBrand).count() > 0:
             print("Examples already seeded, skipping...")
             return
+
+        old = datetime.datetime.now()-datetime.timedelta(days=50)
+        new = datetime.datetime.now()-datetime.timedelta(days=5)
+
+        session.add(SellItem(id=1, sell_header_id=1,part_id=1, amount=100,price=5000))
+        session.add(SellItem(id=2,sell_header_id=2,part_id=2, amount=18, price=8000))
+        session.add(SellItem(id=3,sell_header_id=1,part_id=3, amount=30, price=100))
+
+        session.add(SellHeader(id=1, date=old, number=1))
+        session.add(SellHeader(id=2, date=new, number=2))
+
         session.add(VehicleBrand(id=1, name="Ford",country="USA"))
         session.add(VehicleBrand(id=2, name="Ferrari",country="Italia"))
         session.add(VehicleBrand(id=3, name="Opel", country="Germany"))
@@ -187,18 +198,18 @@ def seed_examples():
         session.add(Fuel(id=2, name="Sport Fuel"))
 
 
-        session.add(Parts(id=1, part_number="MNF-001",manufacturer_id=1,name="Fékbetét",type="Fékrendszer",price=5000,amount=30,min_amount=2, max_amount=30))
-        session.add(Parts(id=2, part_number="BSC-002",manufacturer_id=5,name="Fékbetét",type="Fékrendszer",price=5000,amount=30,min_amount=2, max_amount=30))
-        session.add(Parts(id=3, part_number="VLO-003",manufacturer_id=4,name="Fékbetét",type="Fékrendszer",price=5000,amount=30,min_amount=2, max_amount=30))
+        session.add(Parts(id=1, part_number="MNF-001",manufacturer_id=1,name="Fékbetét",type="Fékrendszer",price=5000,amount=110,min_amount=2, max_amount=30))
+        session.add(Parts(id=2, part_number="BSC-002",manufacturer_id=5,name="Fékbetét",type="Fékrendszer",price=5000,amount=20,min_amount=2, max_amount=30))
+        session.add(Parts(id=3, part_number="VLO-003",manufacturer_id=4,name="Fékbetét",type="Fékrendszer",price=5000,amount=2,min_amount=2, max_amount=30))
 
         session.commit()
 
-
-try:
-    #Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-    seed_roles()
-    seed_examples()
-    print("Successfully created all tables")
-except Exception as e:
-    print("Failed to create tables", e)
+if __name__ == '__main__':
+    try:
+        #Base.metadata.drop_all(engine)
+        Base.metadata.create_all(engine)
+        seed_roles()
+        seed_examples()
+        print("Successfully created all tables")
+    except Exception as e:
+        print("Failed to create tables", e)

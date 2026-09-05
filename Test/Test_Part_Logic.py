@@ -1,6 +1,8 @@
+import datetime
 import unittest
 from Controller.PartsController import PartsController
-from Model.database import Sessionlocal, Parts
+from Model.database import Sessionlocal, Parts, SellHeader, SellItem
+
 
 class DummyButton:
     def __init__(self):
@@ -174,5 +176,52 @@ class TestPartLogic(unittest.TestCase):
                 self.assertEqual(updated_part.name, "Új Fék", "A név nem frissült az adatbázisban!")
                 self.assertEqual(updated_part.price, 6000, "Az ár nem frissült az adatbázisban!")
 
+    def test_part_indicator(self):
+        with Sessionlocal() as session:
+            try:
+                test_part = Parts(
+                    part_number="TEST-DELETE-001",
+                    name="Fek",
+                    type="Fekrendszer",
+                    price=5000,
+                    amount=1000,
+                    min_amount=5,
+                    max_amount=50,
+                    manufacturer_id=1
+                )
+
+                test_sell_header = SellHeader(
+                    date=datetime.datetime.now()-datetime.timedelta(days=50),
+                    number=1
+                )
+                session.add_all([test_part,test_sell_header])
+                session.commit()
+
+                sell_header_id = test_sell_header.id
+                part_id = test_part.id
+                test_sell_item = SellItem(
+                    sell_header_id=sell_header_id,
+                    part_id = part_id,
+                    amount=100,
+                    price=5000
+                )
+                session.add(test_sell_item)
+                session.commit()
+
+                mock_app = DummyApp()
+                mock_view = DummyView()
+                controller = PartsController(mock_app, mock_view)
+
+                controller.part_indicator(test_part.id)
+                with Sessionlocal() as session:
+                    updated_part = session.query(Parts).filter(Parts.id == part_id).first()
+                    self.assertEqual(8,updated_part.min_amount,"The min amount is correct")
+                    self.assertEqual(104,updated_part.max_amount, "The max amount is correct")
+            finally:
+                with Sessionlocal() as session:
+                    session.query(SellItem).filter(SellItem.id == test_sell_item.id).delete()
+                    session.query(Parts).filter(Parts.id == part_id).delete()
+                    session.query(SellHeader).filter(SellHeader.id == sell_header_id).delete()
+                    session.commit()
 if __name__ == '__main__':
     unittest.main()

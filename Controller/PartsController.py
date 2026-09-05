@@ -1,4 +1,9 @@
-from Model.database import Parts, Sessionlocal
+import math
+from datetime import date, timedelta
+
+from sqlalchemy import func
+
+from Model.database import Parts, Sessionlocal, SellItem, SellHeader
 from View.AddPartView import AddPartView
 from View.EditPartView import EditPartView
 
@@ -26,6 +31,8 @@ class PartsController:
             try:
                 parts_list = session.query(Parts).all()
                 for part in parts_list:
+                    self.part_indicator(part.id)
+                    session.refresh(part)
                     if part.amount < part.min_amount:
                         line_tag = ("low_stock",)
                     elif part.amount >= part.max_amount:
@@ -210,4 +217,27 @@ class PartsController:
             except Exception as e:
                 session.rollback()
                 print("Hiba történt a törlés során: ",e)
+                return False
+
+    def part_indicator(self, part_id):
+        with Sessionlocal() as session:
+            try:
+                ninety_days_ago = date.today() - timedelta(days=90)
+                total_sold = session.query(func.sum(SellItem.amount)).join(SellHeader).filter(SellHeader.date >= ninety_days_ago,SellItem.part_id == part_id).scalar()
+                if total_sold is None:
+                    total_sold = 0
+                sold_per_day = total_sold / 90.0
+                min_sold =math.ceil(sold_per_day * 7)
+                max_sold = math.ceil(min_sold*13)
+                parts_to_update = session.query(Parts).filter(Parts.id == part_id).first()
+                if parts_to_update:
+                    parts_to_update.min_amount = min_sold
+                    parts_to_update.max_amount = max_sold
+                    session.commit()
+                    return True
+                else:
+                    return False
+            except Exception as e:
+                session.rollback()
+                print("Hiba történt a frissítés során: ", e)
                 return False
