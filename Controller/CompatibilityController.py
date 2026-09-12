@@ -1,5 +1,3 @@
-from sympy.parsing.sympy_parser import null
-
 from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine
 
 class CompatibilityController:

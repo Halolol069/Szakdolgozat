@@ -44,6 +44,13 @@ class PartsController:
             except Exception as e:
                 print("Hiba történt az adatbázis lekérdezéskor: ",e)
 
+    def load_low_parts(self):
+        with Sessionlocal() as session:
+            try:
+                return session.query(Parts).filter(Parts.amount < Parts.min_amount).all()
+            except Exception as e:
+                print("Hiba történt az adatbázis lekérdezéskor: ", e)
+
     def open_add_popup(self):
         self.add_view = AddPartView(self.view)
         self.add_view.save_button.configure(command=self.save_part)

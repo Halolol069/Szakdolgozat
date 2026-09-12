@@ -1,6 +1,7 @@
 import bcrypt
 
 from Model.database import User, Sessionlocal
+
 class LoginController:
     def __init__(self, main_app, view):
         self.main_app = main_app
@@ -37,3 +38,5 @@ class LoginController:
             self.main_app.show_dashboard()
 
             print("Sikeres belépés!")
+
+            self.main_app.dashboard_controller.check_inventory_alerts()
