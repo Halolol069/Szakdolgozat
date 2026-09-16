@@ -35,6 +35,7 @@ class LoginController:
             self.view.username.delete(0, "end")
             self.view.password.delete(0, "end")
             self.view.error_label.configure(text="")
+            self.main_app.current_user = self.user
             self.main_app.show_dashboard()
 
             print("Sikeres belépés!")

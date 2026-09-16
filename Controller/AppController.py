@@ -2,11 +2,11 @@ import  View.MainView as MainView
 import View.LoginView as LoginView
 import View.RegisterView as RegisterView
 import View.CompatibilityView as CompatibilityView
+from View import DashboardView as DashboardView
 from Controller import RegisterController as RegisterController
 from Controller import LoginController as LoginController
 from Controller import CompatibilityController as CompatibilityController
 from Controller import DashboardController
-from View import DashboardView
 
 
 class Controller:
@@ -35,7 +35,10 @@ class Controller:
 
     def show_dashboard(self):
         self.app.show_frame(self.dashboard)
-
+        if self.current_user.role.name == 'Admin':
+            pass
+        else:
+            self.dashboard.compatibility_button.grid_forget()
 if __name__ == '__main__':
     controller = Controller()
 

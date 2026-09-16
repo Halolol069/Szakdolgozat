@@ -1,13 +1,39 @@
 from tkinter import ttk
+
+from customtkinter import CTkOptionMenu
+
 import View.PartsView as PartView
 from Controller import PartsController as PartsController
 import customtkinter
 
 import View.CompatibilityView as CompatibilitiesView
 from Controller import CompatibilityController as CompatibilitiesController
-from Model.database import Parts, Sessionlocal
+from Model.database import Parts, Sessionlocal, TransactionLog
+
 
 class DashboardController:
+    def save_transaction_log(self, transaction_type, quantity, part_id):
+        with Sessionlocal() as session:
+            new_transaction =  TransactionLog(transaction_type=transaction_type, user_id=self.main_app.current_user.id, quantity=quantity, part_id=part_id)
+            current_part = session.query(Parts).filter(Parts.id == part_id).first()
+            if transaction_type == "Bevételezés":
+                current_part.amount += quantity
+            elif transaction_type == "Kiadás":
+                current_part.amount -= quantity
+            session.add(new_transaction)
+            session.commit()
+
+    def execute_transaction(self):
+        chosed_line = self.view.parts_tree.selection()
+
+        if chosed_line:
+            line_datas = self.view.parts_tree.item(chosed_line[0])["values"]
+
+            chosed_line_id = line_datas[0]
+            ptr_type = self.view.transaction_type_menu.get()
+            ptr_quantity = int(self.view.transaction_quantity_menu.get())
+            self.save_transaction_log(ptr_type, ptr_quantity, chosed_line_id)
+
     def __init__(self, main_app, view):
         self.main_app = main_app
         self.view = view
@@ -19,6 +45,10 @@ class DashboardController:
         self.view.compatibility_button.configure(command=self.show_compatibility)
 
         self.view.back_button.configure(command=self.back)
+
+        self.view.transaction_type_menu = CTkOptionMenu(master=view,values=["Bevételezés", "Kiadás"])
+
+        self.view.save_button.configure(command=self.execute_transaction)
 
     def logout(self):
         self.main_app.login.username.delete(0, "end")
@@ -103,6 +133,5 @@ class DashboardController:
 
         popup_cancel_button = customtkinter.CTkButton(popup, text="Kilépés", command=popup.destroy)
         popup_cancel_button.pack(pady=10)
-
         for parts in low_part:
             parts_tree.insert("", "end", values=(parts.part_number, parts.name, parts.amount), tags="part")

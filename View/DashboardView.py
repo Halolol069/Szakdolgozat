@@ -30,6 +30,9 @@ class DashboardView(customtkinter.CTkFrame):
         self.main_frame = customtkinter.CTkFrame(self)
         self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
 
+        self.save_button = customtkinter.CTkButton(self.main_frame, text="Mentés")
+        self.save_button.pack(side="left")
+
         self.welcome_label = customtkinter.CTkLabel(self.main_frame, text="Üdvözöllek a Rendszerben!",
                                                     font=customtkinter.CTkFont(size=24, weight="bold"))
         self.welcome_label.pack(pady=50)

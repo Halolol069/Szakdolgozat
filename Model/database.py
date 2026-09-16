@@ -1,11 +1,10 @@
 import datetime
 import os
-from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey
+from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
 from typing import List
-
 
 dotenv = load_dotenv()
 database_url = f"{os.getenv('DB_CONNECTION')}://{os.getenv('DB_USERNAME')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_DATABASE')}"
@@ -22,6 +21,8 @@ class User(Base):
     phone:Mapped[str] = mapped_column(unique=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
     role: Mapped["Role"] = relationship(back_populates="users")
+    transaction_logs:Mapped[List["TransactionLog"]] = relationship(back_populates="users", cascade="all, delete-orphan")
+
 class Role(Base):
     __tablename__ = "roles"
     id:Mapped[int] = mapped_column(primary_key=True)
@@ -57,6 +58,7 @@ class Parts(Base):
     manufacturer:Mapped["Manufacturer"] = relationship(back_populates="parts")
     sell_items:Mapped[List["SellItem"]] = relationship(back_populates="part", cascade="all, delete-orphan")
     compatibilities:Mapped[List["Compatibility"]] = relationship(back_populates="part", cascade="all, delete-orphan")
+    transaction_logs:Mapped[List["TransactionLog"]] = relationship(back_populates="part", cascade="all, delete-orphan")
     name:Mapped[str] = mapped_column(String(50))
     type:Mapped[str] = mapped_column(String(50))
     price:Mapped[int] = mapped_column(Integer)
@@ -144,6 +146,17 @@ class MotorCompatibility(Base):
     modell:Mapped["Modell"] = relationship(back_populates="motor_comps")
     engine_id:Mapped[int] = mapped_column(ForeignKey("engines.id"))
     engine:Mapped["Engine"] = relationship(back_populates="motor_comps")
+
+class TransactionLog(Base):
+    __tablename__ = "transaction_logs"
+    id:Mapped[int] = mapped_column(primary_key=True)
+    transaction_type:Mapped[str] = mapped_column(String)
+    user_id:Mapped[int] = mapped_column(ForeignKey("users.id"))
+    users:Mapped["User"] = relationship(back_populates="transaction_logs")
+    part_id:Mapped[int] = mapped_column(ForeignKey("parts.id"))
+    part:Mapped["Parts"] = relationship(back_populates="transaction_logs")
+    quantity:Mapped[int] = mapped_column(Integer)
+    date:Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
 
 Sessionlocal = sessionmaker(bind=engine)
 def seed_roles():
