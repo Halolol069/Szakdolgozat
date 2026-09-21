@@ -18,8 +18,11 @@ class DashboardView(customtkinter.CTkFrame):
         self.parts_button = customtkinter.CTkButton(self.sidebar_frame, text="Alkatrészek")
         self.parts_button.grid(row=1, column=0, padx=20, pady=10)
 
+        self.transaction_button = customtkinter.CTkButton(self.sidebar_frame, text="Raktármozgás")
+        self.transaction_button.grid(row=2, column=0, padx=20, pady=10)
+
         self.compatibility_button = customtkinter.CTkButton(self.sidebar_frame, text="Kompatibilitás")
-        self.compatibility_button.grid(row=2, column=0, padx=20, pady=10)
+        self.compatibility_button.grid(row=3, column=0, padx=20, pady=10)
 
         self.logout_button = customtkinter.CTkButton(self.sidebar_frame, text="Kijelentkezés",
                                                      fg_color="red", hover_color="darkred")
@@ -29,9 +32,6 @@ class DashboardView(customtkinter.CTkFrame):
 
         self.main_frame = customtkinter.CTkFrame(self)
         self.main_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
-
-        self.save_button = customtkinter.CTkButton(self.main_frame, text="Mentés")
-        self.save_button.pack(side="left")
 
         self.welcome_label = customtkinter.CTkLabel(self.main_frame, text="Üdvözöllek a Rendszerben!",
                                                     font=customtkinter.CTkFont(size=24, weight="bold"))
