@@ -23,6 +23,16 @@ class PartsController:
         self.selected_edit_id = None
         self.load_parts()
 
+        self.role_permission()
+
+    def role_permission(self):
+        current_user = self.main_app.current_user
+
+        if current_user and current_user.role_id == 2:
+            self.view.add_button.grid_remove()
+            self.view.delete_button.grid_remove()
+            self.view.edit_button.grid_remove()
+
     def load_parts(self):
         for parts in self.view.tree.get_children():
             self.view.tree.delete(parts)

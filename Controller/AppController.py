@@ -38,7 +38,7 @@ class Controller:
     def show_dashboard(self):
         self.app.show_frame(self.dashboard)
         if self.current_user.role.name == 'Admin':
-            pass
+            self.dashboard.compatibility_button.grid(row=3, column=0, padx=20, pady=10)
         else:
             self.dashboard.compatibility_button.grid_forget()
 

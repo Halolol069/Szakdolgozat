@@ -41,7 +41,7 @@ class RegisterController:
         entered_phone = self.view.phone.get()
         hashed_password = bcrypt.hashpw(entered_password.encode("utf-8"), bcrypt.gensalt())
 
-        self.user = User(name=entered_name, password=hashed_password.decode("utf-8"), email=entered_email,phone=entered_phone,role_id=1)
+        self.user = User(name=entered_name, password=hashed_password.decode("utf-8"), email=entered_email,phone=entered_phone,role_id=2)
 
         with Sessionlocal() as session:
             try:

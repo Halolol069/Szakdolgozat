@@ -1,5 +1,7 @@
 import datetime
 import os
+
+import bcrypt
 from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -161,18 +163,28 @@ class TransactionLog(Base):
 Sessionlocal = sessionmaker(bind=engine)
 def seed_roles():
     with Sessionlocal() as session:
-        user_role = session.get(Role,1)
-        if user_role is None:
-            user_role = Role(id=1,name="User")
-            session.add(user_role)
-            session.commit()
-            session.refresh(user_role)
-        return user_role
+        admin_role = session.get(Role,1)
+        if admin_role is None:
+            admin_role = Role(id=1,name="Admin")
+            session.add(admin_role)
+
+        raktaros_role = session.get(Role,2)
+        if raktaros_role is None:
+            raktaros_role = Role(id=2,name="Raktaros")
+            session.add(raktaros_role)
+
+        session.commit()
 def seed_examples():
     with Sessionlocal() as session:
         if session.query(VehicleBrand).count() > 0:
             print("Examples already seeded, skipping...")
             return
+
+        admin_pw=os.getenv("DEFAULT_ADMIN_PW")
+        if not admin_pw:
+            raise ValueError("ERROR: DEFAULT_ADMIN_PW not set!")
+        hashed_password = bcrypt.hashpw(admin_pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        session.add(User(name="asd3", password=hashed_password, email="asd@gmail.com",phone="+214586453",role_id=1))
 
         old = datetime.datetime.now()-datetime.timedelta(days=50)
         new = datetime.datetime.now()-datetime.timedelta(days=5)
