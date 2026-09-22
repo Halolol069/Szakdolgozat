@@ -1,5 +1,7 @@
 import unittest
 from Controller.TransactionController import TransactionController
+from Model.database import Sessionlocal, Parts, Base
+from Test.Test_Base import Test_base
 
 
 class DummyButton:
@@ -39,8 +41,9 @@ class DummyApp:
         self.id = 1
 
 
-class Test_Transaction_Logic(unittest.TestCase):
+class Test_Transaction_Logic(Test_base):
     def setUp(self):
+        super().setUp()
         self.mock_app = DummyApp()
         self.mock_view = DummyView()
 
@@ -63,6 +66,37 @@ class Test_Transaction_Logic(unittest.TestCase):
                          "A betűket tartalmazó szöveget érvénytelennek kellene tekinteni!")
         self.assertFalse(self.controller.valid_quantity(""), "Az üres mezőt érvénytelennek kellene tekinteni!")
 
+    def test_save_transaction_log(self):
+        with Sessionlocal() as session:
+            test_part = Parts(
+                id=999, name="TesztFék", manufacturer_id=1, part_number="TF-01",
+                type="Fék", price=10000, amount=10, min_amount=2, max_amount=20
+            )
+            session.add(test_part)
+            session.commit()
+        self.controller.save_transaction_log(transaction_type="Bevételezés", quantity=5, part_id=999)
 
+        with Sessionlocal() as session:
+            updated_part = session.query(Parts).filter_by(id=999).first()
+            self.assertEqual(15, updated_part.amount, "A bevételezés után a mennyiségnek 15-nek kell lennie!")
+
+    def test_save_transaction_log_expense(self):
+        with Sessionlocal() as session:
+            test_part = Parts(
+                id=888, name="TesztLámpa", manufacturer_id=1, part_number="TL-01",
+                type="lámpa", price=5000, amount=10, min_amount=2, max_amount=20
+            )
+            session.add(test_part)
+            session.commit()
+        self.controller.save_transaction_log(transaction_type="Kiadás", quantity=3, part_id=888)
+
+        with Sessionlocal() as session:
+            updated_part = session.query(Parts).filter_by(id=888).first()
+            self.assertEqual(7, updated_part.amount, "A kiadás után a mennyiségnek 7-nek kell lennie!")
+
+
+    def tearDown(self):
+        Base.metadata.drop_all(self.test_engine)
+        self.test_engine.dispose()
 if __name__ == '__main__':
     unittest.main()

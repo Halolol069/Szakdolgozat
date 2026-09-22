@@ -3,12 +3,13 @@ from tkinter import ttk
 from customtkinter import CTkOptionMenu
 
 import View.PartsView as PartView
-from Controller import PartsController as PartsController
+from Controller import PartsController as PartsController, TransactionController
 import customtkinter
 
 import View.CompatibilityView as CompatibilitiesView
 from Controller import CompatibilityController as CompatibilitiesController
 from Model.database import Parts, Sessionlocal, TransactionLog
+from View.TransactionView import TransactionView
 
 
 class DashboardController:
@@ -25,7 +26,19 @@ class DashboardController:
 
         self.view.back_button.configure(command=self.back)
 
-        self.view.transaction_type_menu = CTkOptionMenu(master=view,values=["Bevételezés", "Kiadás"])
+        self.view.transaction_button.configure(command=self.show_transaction)
+
+    def clear_main_frame(self):
+        for widget in self.view.main_frame.winfo_children():
+            widget.destroy()
+        self.view.back_button.grid(row=6, column=0, padx=20, pady=20, sticky="s")
+
+    def show_transaction(self):
+        self.clear_main_frame()
+        transaction_view = TransactionView(self.view.main_frame)
+        transaction_view.pack(fill="both", expand=True)
+        self.transaction_controller = TransactionController.TransactionController(
+            self.main_app, transaction_view)
 
     def logout(self):
         self.main_app.login.username.delete(0, "end")
@@ -35,13 +48,11 @@ class DashboardController:
         self.main_app.show_login()
 
     def show_parts(self):
-        for widget in self.view.main_frame.winfo_children():
-            widget.destroy()
+        self.clear_main_frame()
 
         parts_view = PartView.PartsView(self.view.main_frame)
         parts_view.pack(fill="both", expand=True)
         parts_controller = PartsController.PartsController(self.main_app, parts_view)
-        self.view.back_button.grid(row=6, column=0, padx=20, pady=20, sticky="s")
 
     def back(self):
         for widget in self.view.main_frame.winfo_children():
@@ -52,12 +63,10 @@ class DashboardController:
         self.view.back_button.grid_remove()
 
     def show_compatibility(self):
-        for widget in self.view.main_frame.winfo_children():
-            widget.destroy()
+        self.clear_main_frame()
         compatibility_view = CompatibilitiesView.CompatibilityView(self.view.main_frame)
         compatibility_view.pack(fill="both", expand=True)
         compatibility_controller = CompatibilitiesController.CompatibilityController(self.main_app, compatibility_view)
-        self.view.back_button.grid(row=6, column=0, padx=20, pady=20, sticky="s")
 
     def check_inventory_alerts(self):
         missing_parts = self.low_stock()

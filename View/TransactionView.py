@@ -30,3 +30,6 @@ class TransactionView(customtkinter.CTkFrame):
 
         self.save_button = customtkinter.CTkButton(master=self, text="Mentés")
         self.save_button.grid(row=3, column=0, padx=20, pady=20, sticky="nsew")
+
+        self.grid_columnconfigure((0, 1, 2), weight=1)
+        self.grid_rowconfigure(2, weight=1)

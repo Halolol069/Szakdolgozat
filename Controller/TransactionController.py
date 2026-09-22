@@ -45,19 +45,22 @@ class TransactionController:
     def execute_transaction(self):
         chosed_line = self.view.transaction_tree.selection()
 
-        if chosed_line:
-            raw_quantity = self.view.transaction_quantity_menu.get()
+        if not chosed_line:
+            messagebox.showerror("Hiba", "Kérlek válassz ki egy alkatrészt!")
+            return
 
-            if not self.valid_quantity(raw_quantity):
-                messagebox.showerror("Hiba", "Kérlek érvényes számot adj meg a mennyiséghez!")
-                return
-            line_datas = self.view.transaction_tree.item(chosed_line[0])["values"]
-            chosed_line_id = line_datas[0]
-            ptr_type = self.view.transaction_type_menu.get()
-            ptr_quantity = int(raw_quantity)
-            if ptr_type == "Kiadás" and ptr_quantity > line_datas[2]:
-                messagebox.showerror("Hiba", "Nem megfelelő mennyiség!")
-                return
-            self.save_transaction_log(ptr_type, ptr_quantity, chosed_line_id)
-            self.load_all_parts()
+        raw_quantity = self.view.transaction_quantity_menu.get()
+
+        if not self.valid_quantity(raw_quantity):
+            messagebox.showerror("Hiba", "Kérlek érvényes számot adj meg a mennyiséghez!")
+            return
+        line_datas = self.view.transaction_tree.item(chosed_line[0])["values"]
+        chosed_line_id = line_datas[0]
+        ptr_type = self.view.transaction_type_menu.get()
+        ptr_quantity = int(raw_quantity)
+        if ptr_type == "Kiadás" and ptr_quantity > line_datas[2]:
+            messagebox.showerror("Hiba", "Nem megfelelő mennyiség!")
+            return
+        self.save_transaction_log(ptr_type, ptr_quantity, chosed_line_id)
+        self.load_all_parts()
 

@@ -23,7 +23,6 @@ class Controller:
         self.compatibility_controller = CompatibilityController.CompatibilityController(self,self.compatibility)
         self.dashboard_controller = DashboardController.DashboardController(self, self.dashboard)
         self.login.register_button.configure(command=self.show_register)
-        self.dashboard.transaction_button.configure(command=self.show_transaction)
 
         self.app.show_frame(self.login)
         self.app.mainloop()
@@ -47,4 +46,3 @@ class Controller:
         self.app.show_frame(self.transaction)
 if __name__ == '__main__':
     controller = Controller()
-
