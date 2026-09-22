@@ -98,15 +98,16 @@ class DashboardController:
         table_frame.grid_columnconfigure(0, weight=1)
         table_frame.grid_rowconfigure(0, weight=1)
 
-        columns = ["part_number", "name", "amount"]
+        columns = ["part_number", "name", "amount", "for_order"]
         parts_tree = ttk.Treeview(table_frame, columns=columns, show="headings", style="Treeview")
         parts_tree.heading("part_number", text="Cikkszám")
         parts_tree.heading("name", text="Megnevezés")
         parts_tree.heading("amount", text="Mennyiség")
-
+        parts_tree.heading("for_order", text="Rendelési javaslat")
         parts_tree.column("part_number", width=100, anchor="center")
         parts_tree.column("name", width=100, anchor="center")
         parts_tree.column("amount", width=80, anchor="center")
+        parts_tree.column("for_order", width=120, anchor="center")
 
         parts_tree.grid(row=0, column=0, padx=20, pady=20, sticky="ns")
 
@@ -120,4 +121,7 @@ class DashboardController:
         popup_cancel_button = customtkinter.CTkButton(popup, text="Kilépés", command=popup.destroy)
         popup_cancel_button.pack(pady=10)
         for parts in low_part:
-            parts_tree.insert("", "end", values=(parts.part_number, parts.name, parts.amount), tags="part")
+            suggested_order = parts.max_amount - parts.amount
+            if suggested_order < 0:
+                suggested_order = 0
+            parts_tree.insert("", "end", values=(parts.part_number, parts.name, parts.amount, suggested_order), tags="part")
