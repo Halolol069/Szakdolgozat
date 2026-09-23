@@ -1,31 +1,41 @@
-from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine
+from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine, Vehicle, VehicleType
+
 
 class CompatibilityController:
     def __init__(self, main_app, view):
         self.main_app = main_app
         self.view = view
         self.view.controller = self
-        self.load_vehiclebrand()
+        self.load_vehicletype()
         self.load_all_parts()
         self.view.save_button.configure(command=self.save_compatibility)
 
-    def load_vehiclebrand(self):
+    def load_vehicletype(self):
         with Sessionlocal() as session:
-            self.vehiclebrand = session.query(VehicleBrand).all()
+            try:
+                types = session.query(VehicleType).all()
+                self.type_list = [t.name for t in types]
+                self.view.vehicletype_dropdown.configure(values=self.type_list, command=self.load_vehiclebrand)
+            except Exception as e:
+                print("Failed to load vehiclebrand.", e)
 
-            self.vehiclebrand_list = []
-            for elements in self.vehiclebrand:
-                self.vehiclebrand_list.append(elements.name)
+    def load_vehiclebrand(self,selected_type):
+        self.view.model_dropdown.configure(values=["Model"])
+        self.view.engine_dropdown.configure(values=["Motor"])
+        with Sessionlocal() as session:
+            brands = session.query(VehicleBrand).join(Modell).join(Vehicle).join(VehicleType).filter(VehicleType.name == selected_type).distinct().all()
+            self.vehiclebrand_list = [b.name for b in brands]
             self.view.vehiclebrand_dropdown.configure(values=self.vehiclebrand_list, command=self.load_models)
+            self.view.vehiclebrand_dropdown.set("Márka")
 
     def load_models(self, selected_brand):
+        self.view.engine_dropdown.configure(values=["Motor"])
         with Sessionlocal() as session:
-            self.vehiclebrand = session.query(VehicleBrand).filter_by(name=selected_brand).first()
-
-            self.model_list = []
-            for elements in self.vehiclebrand.models:
-                self.model_list.append(elements.name)
+            selected_type = self.view.vehicletype_dropdown.get()
+            models = session.query(Modell).join(VehicleBrand).join(Vehicle).join(VehicleType).filter(VehicleBrand.name == selected_brand,VehicleType.name == selected_type).all()
+            self.model_list = [m.name for m in models]
             self.view.model_dropdown.configure(values=self.model_list, command=self.load_engines)
+            self.view.model_dropdown.set("Modell")
 
     def load_engines(self, selected_model):
         with Sessionlocal() as session:

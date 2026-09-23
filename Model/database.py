@@ -215,17 +215,36 @@ def seed_examples():
 
         session.add(Engine(id=1,engine_code="coyote v8",horse_power=500, ccc=5000, vehicleBrand_id=1,fuel_id=1))
         session.add(Engine(id=2,engine_code="italian v10",horse_power=690,ccc=6000, vehicleBrand_id=2, fuel_id=2))
+        session.add(Engine(id=4, engine_code="1.2", horse_power=60, ccc=1200, vehicleBrand_id=3, fuel_id=1))
+        session.add(Engine(id=5, engine_code="1.4", horse_power=88, ccc=1400, vehicleBrand_id=4, fuel_id=2))
 
         session.add(MotorCompatibility(id=1,modell_id=1, engine_id=1 ))
         session.add(MotorCompatibility(id=2,modell_id=2, engine_id=2 ))
+        session.add(MotorCompatibility(id=3,modell_id=3, engine_id=3 ))
+        session.add(MotorCompatibility(id=4,modell_id=4, engine_id=4 ))
 
         session.add(Fuel(id=1, name="Gasoline"))
         session.add(Fuel(id=2, name="Sport Fuel"))
+        session.add(Fuel(id=3, name="Diesel"))
 
 
         session.add(Parts(id=1, part_number="MNF-001",manufacturer_id=1,name="Fékbetét",type="Fékrendszer",price=5000,amount=110,min_amount=2, max_amount=30))
         session.add(Parts(id=2, part_number="BSC-002",manufacturer_id=5,name="Fékbetét",type="Fékrendszer",price=5000,amount=20,min_amount=2, max_amount=30))
         session.add(Parts(id=3, part_number="VLO-003",manufacturer_id=4,name="Fékbetét",type="Fékrendszer",price=5000,amount=2,min_amount=2, max_amount=30))
+
+        session.add(VehicleType(id=1, name="Személyautó"))
+        session.add(VehicleType(id=2, name="Motorkerékpár"))
+
+        session.add(VehicleBrand(id=5, name="MZ", country="NDK"))
+        session.add(Modell(id=5, name="TS-125", vehicleBrand_id=5, generation=1, date=datetime.datetime(2015, 1, 1)))
+        session.add(Engine(id=3, engine_code="TS125", horse_power=12, ccc=125, vehicleBrand_id=5, fuel_id=1))
+        session.add(MotorCompatibility(id=5, modell_id=5, engine_id=3))
+
+        session.add(Vehicle(id=1, vehicle_type_id=1, modell_id=1))
+        session.add(Vehicle(id=2, vehicle_type_id=1, modell_id=2))
+        session.add(Vehicle(id=3, vehicle_type_id=1, modell_id=3))
+        session.add(Vehicle(id=4, vehicle_type_id=1, modell_id=4))
+        session.add(Vehicle(id=5, vehicle_type_id=2, modell_id=5))
 
         session.commit()
 
