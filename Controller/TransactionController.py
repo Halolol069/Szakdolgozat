@@ -17,10 +17,13 @@ class TransactionController:
 
         with Sessionlocal() as session:
             try:
-                all_parts = session.query(Parts).all()
                 search_term = self.view.search_bar.get()
+                if search_term:
+                    all_parts=session.query(Parts).filter(Parts.name.ilike(f"%{search_term}%")).all()
+                else:
+                    all_parts = session.query(Parts).all()
+
                 for part in all_parts:
-                    if search_term.lower() in part.name.lower():
                         self.view.transaction_tree.insert("", "end", values=(part.id, part.name, part.amount))
             except Exception as e:
                 print("Hiba történt az adatbázis mentésekor!",e)
