@@ -1,6 +1,6 @@
-from tkinter import ttk
-
-from customtkinter import CTkOptionMenu
+import datetime
+from tkinter import ttk, filedialog, messagebox
+from fpdf import fpdf
 
 import View.PartsView as PartView
 from Controller import PartsController as PartsController, TransactionController
@@ -27,6 +27,8 @@ class DashboardController:
         self.view.back_button.configure(command=self.back)
 
         self.view.transaction_button.configure(command=self.show_transaction)
+
+        self.view.export_pdf_button.configure(command=self.export_inventory_pdf)
 
     def clear_main_frame(self):
         for widget in self.view.main_frame.winfo_children():
@@ -85,6 +87,59 @@ class DashboardController:
     def option_continue(self, popup):
         popup.destroy()
         self.show_parts()
+
+    def export_inventory_pdf(self):
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF fájlok", "*.pdf")],
+            title="PDF export"
+        )
+
+        if not filepath:
+            return
+
+        try:
+            with Sessionlocal() as session:
+                parts =session.query(Parts).all()
+
+            pdf = fpdf.FPDF()
+            pdf.add_page()
+
+            pdf.set_font("Helvetica", style="B", size=16)
+            current_date = datetime.datetime.now().strftime("%Y.%m.%d")
+            pdf.cell(0,10, text='Raktárkészlet', align="center", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", size=10)
+            pdf.cell(0,10, text=f"Lekérdezés dátuma: {current_date}", align="center",new_x="LMARGIN", new_y="NEXT")
+
+            pdf.ln(5)
+            pdf.set_font("Helvetica", style="B", size=10)
+            pdf.cell(40,10, "Cikkszám", border=1, align="center")
+            pdf.cell(90,10, "Megnevezés", border=1, align="center")
+            pdf.cell(30,10, "Készlet", border=1, align="center")
+            pdf.cell(30,10, "Egység ár", border=1, align="center",new_x="LMARGIN", new_y="NEXT")
+
+            pdf.set_font("Helvetica", size=10)
+            for part in parts:
+                if part.name:
+                    safe_name = part.name[45:]
+                else:
+                    print("Ismeretlen")
+                if part.part_number:
+                    safe_part_num = part.part_number[:20]
+                else:
+                    "N/A"
+
+                pdf.cell(40, 10, safe_part_num, border=1, align='C')
+                pdf.cell(90, 10, safe_name, border=1, align='L')
+                pdf.cell(30, 10, f"{part.amount} db", border=1, align='C')
+                pdf.cell(30, 10, f"{part.price} Ft", border=1, new_x="LMARGIN", new_y="NEXT", align='R')
+
+            pdf.output(filepath)
+
+        except Exception as e:
+            print(f"Hiba a PDF generálásakor: {e}")
+            messagebox.showerror("Hiba", "Nem sikerült legenerálni a PDF-et.")
+
 
     def show_low_stock_popup(self, low_part):
         popup = customtkinter.CTkToplevel()

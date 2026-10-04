@@ -24,6 +24,9 @@ class DashboardView(customtkinter.CTkFrame):
         self.compatibility_button = customtkinter.CTkButton(self.sidebar_frame, text="Kompatibilitás")
         self.compatibility_button.grid(row=3, column=0, padx=20, pady=10)
 
+        self.export_pdf_button = customtkinter.CTkButton(self.sidebar_frame, text="PDF Export")
+        self.export_pdf_button.grid(row=4, column=0, padx=20, pady=10)
+
         self.logout_button = customtkinter.CTkButton(self.sidebar_frame, text="Kijelentkezés",
                                                      fg_color="red", hover_color="darkred")
         self.logout_button.grid(row=5, column=0, padx=20, pady=20, sticky="s")
