@@ -13,3 +13,4 @@ class Test_base(unittest.TestCase):
 
     def tearDown(self):
         Base.metadata.drop_all(self.test_engine)
+        self.test_engine.dispose()
