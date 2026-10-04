@@ -33,6 +33,7 @@ class DummyView:
         self.save_button = DummyButton()
         self.search_bar = DummyEntry()
         self.transaction_tree = DummyTree()
+        self.receipt_button = DummyButton()
 
 
 class DummyApp:

@@ -18,6 +18,8 @@ class DummyView:
         self.parts_button = DummyButton()
         self.compatibility_button = DummyButton()
         self.back_button = DummyButton()
+        self.transaction_button = DummyButton()
+        self.export_pdf_button = DummyButton()
 
 class TestDashboardLogic(Test_base):
     def test_low_stock(self):

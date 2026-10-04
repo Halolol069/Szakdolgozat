@@ -2,7 +2,7 @@ import datetime
 import unittest
 from Controller.PartsController import PartsController
 from Model.database import Sessionlocal, Parts, SellHeader, SellItem
-
+from Test.Test_Base import Test_base
 
 class DummyButton:
     def __init__(self):
@@ -36,7 +36,15 @@ class DummyView:
         self.tree = DummyTree()
 
 class DummyApp:
-    pass
+    class DummyUser:
+        def __init__(self):
+            self.id = 1
+            self.name = "Teszt Elek"
+            self.role_id = 1
+
+    def __init__(self):
+        self.current_user = self.DummyUser()
+
 
 class DummyVar:
     def __init__(self, value):
@@ -72,7 +80,7 @@ class DummyEditView:
     def destroy(self):
         pass
 
-class TestPartLogic(unittest.TestCase):
+class TestPartLogic(Test_base):
     def test_read_part(self):
         with Sessionlocal() as session:
             test_part = Parts(
