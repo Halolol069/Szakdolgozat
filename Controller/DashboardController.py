@@ -121,13 +121,13 @@ class DashboardController:
             pdf.set_font("Helvetica", size=10)
             for part in parts:
                 if part.name:
-                    safe_name = part.name[45:]
+                    safe_name = part.name[:45]
                 else:
-                    print("Ismeretlen")
+                    safe_name = "Ismeretlen"
                 if part.part_number:
                     safe_part_num = part.part_number[:20]
                 else:
-                    "N/A"
+                    safe_part_num = "N/A"
 
                 pdf.cell(40, 10, safe_part_num, border=1, align='C')
                 pdf.cell(90, 10, safe_name, border=1, align='L')
