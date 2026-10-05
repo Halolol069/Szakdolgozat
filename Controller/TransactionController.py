@@ -102,7 +102,7 @@ class TransactionController:
                 price = part.price
             else:
                 price = 0
-            total_price = price + quantity
+            total_price = price * quantity
 
         filepath = filedialog.asksaveasfilename(
             defaultextension=".pdf",
@@ -123,7 +123,7 @@ class TransactionController:
 
             pdf.set_font("Helvetica", "B", 12)
             pdf.cell(0,8, text=f"Dátum: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", new_x="LMARGIN", new_y="NEXT", align="center")
-            pdf.cell(0,8,text=f"Vevo neve: {buyer_name}", new_x="LMARGIN", new_y="NEXT", align="center")
+            pdf.cell(0,8,text=f"Vevő neve: {buyer_name}", new_x="LMARGIN", new_y="NEXT", align="center")
             pdf.ln(10)
 
             pdf.set_font("Helvetica", "B", 12)
