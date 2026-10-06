@@ -2,7 +2,7 @@ import datetime
 import os
 
 import bcrypt
-from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func
+from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func, Column
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
@@ -67,6 +67,7 @@ class Parts(Base):
     amount:Mapped[int] = mapped_column(Integer)
     min_amount:Mapped[int] = mapped_column(Integer)
     max_amount:Mapped[int] = mapped_column(Integer)
+    image_path = Column(String, nullable = True)
 
 class Fuel(Base):
     __tablename__="fuels"
