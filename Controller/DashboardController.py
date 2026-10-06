@@ -105,10 +105,14 @@ class DashboardController:
             pdf = fpdf.FPDF()
             pdf.add_page()
 
-            pdf.set_font("Helvetica", style="B", size=16)
+            pdf.add_font("Arial", "", "assets/fonts/arial.ttf")
+            pdf.add_font("Arial", "B", "assets/fonts/arialbd.ttf")
+            pdf.add_font("Arial", "I", "assets/fonts/ariali.ttf")
+
+            pdf.set_font("Arial", style="B", size=16)
             current_date = datetime.datetime.now().strftime("%Y.%m.%d")
             pdf.cell(0,10, text='Raktárkészlet', align="center", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", size=10)
+            pdf.set_font("Arial", size=10)
             pdf.cell(0,10, text=f"Lekérdezés dátuma: {current_date}", align="center",new_x="LMARGIN", new_y="NEXT")
 
             pdf.ln(5)
@@ -118,7 +122,7 @@ class DashboardController:
             pdf.cell(30,10, "Készlet", border=1, align="center")
             pdf.cell(30,10, "Egység ár", border=1, align="center",new_x="LMARGIN", new_y="NEXT")
 
-            pdf.set_font("Helvetica", size=10)
+            pdf.set_font("Arial", size=10)
             for part in parts:
                 if part.name:
                     safe_name = part.name[:45]

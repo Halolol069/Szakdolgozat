@@ -1,4 +1,5 @@
 import datetime
+import os
 from tkinter import messagebox, filedialog
 
 import customtkinter
@@ -103,6 +104,7 @@ class TransactionController:
             else:
                 price = 0
             total_price = price * quantity
+            part_image_path = part.image_path
 
         filepath = filedialog.asksaveasfilename(
             defaultextension=".pdf",
@@ -117,30 +119,43 @@ class TransactionController:
             pdf = FPDF()
             pdf.add_page()
 
-            pdf.set_font("Helvetica", "B", 16)
+            pdf.add_font("Arial","", "assets/fonts/arial.ttf")
+            pdf.add_font("Arial","B", "assets/fonts/arialbd.ttf")
+            pdf.add_font("Arial", "I", "assets/fonts/ariali.ttf")
+
+            pdf.set_font("Arial", "B",16)
             pdf.cell(0,10, text="Szállítólevél", new_x="LMARGIN", new_y="NEXT", align="center")
             pdf.ln(10)
 
-            pdf.set_font("Helvetica", "B", 12)
+            pdf.set_font("Arial", "B", 12)
             pdf.cell(0,8, text=f"Dátum: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", new_x="LMARGIN", new_y="NEXT", align="center")
             pdf.cell(0,8,text=f"Vevő neve: {buyer_name}", new_x="LMARGIN", new_y="NEXT", align="center")
             pdf.ln(10)
 
-            pdf.set_font("Helvetica", "B", 12)
+            pdf.set_font("Arial", "B", 12)
             pdf.cell(90,10,"Megnevezés", border=1, align="L")
             pdf.cell(30,10, "Mennyiség", border=1, align="L")
             pdf.cell(35,10, "Egységár", border=1, align="R")
             pdf.cell(35,10, "Összesen", border=1, align="R", new_x="LMARGIN", new_y="NEXT")
 
-            pdf.set_font("Helvetica", "B", 12)
+            pdf.set_font("Arial", "B", 12)
             safe_name = part_name[:40]
             pdf.cell(90,10, safe_name, border=1, align="L")
             pdf.cell(30,10, f"{quantity} db", border=1, align="center")
             pdf.cell(35,10, f"{price} Ft", border=1, align="R")
             pdf.cell(35,10, f"{total_price} Ft", border=1, align="R", new_x="LMARGIN", new_y="NEXT")
 
-            pdf.ln(20)
-            pdf.set_font("Helvetica", "I", 10)
+            if part_image_path and os.path.exists(part_image_path):
+                pdf.ln(10)
+                pdf.set_font("Arial", "B", 10)
+                pdf.cell(0,10,"A megvásárolt alkatrész: ", new_x="LMARGIN", new_y="NEXT", align="C")
+
+                pdf.image(part_image_path, x=85, y=pdf.get_y(), w=40)
+                pdf.ln(45)
+            else:
+                pdf.ln(20)
+
+            pdf.set_font("Arial", "I", 10)
             pdf.cell(0,10, "Köszönjük a vásárlást!", align="center")
 
             pdf.output(filepath)
