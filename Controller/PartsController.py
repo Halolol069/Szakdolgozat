@@ -1,6 +1,11 @@
 import math
+import os
+import shutil
 from datetime import date, timedelta
+from tkinter import filedialog
 
+import customtkinter
+from PIL import Image
 from sqlalchemy import func
 
 from Model.database import Parts, Sessionlocal, SellItem, SellHeader
@@ -63,6 +68,9 @@ class PartsController:
 
     def open_add_popup(self):
         self.add_view = AddPartView(self.view)
+        self.current_image_path = None
+
+        self.add_view.upload_button.configure(command=self.upload_add_image)
         self.add_view.save_button.configure(command=self.save_part)
 
     def save_part(self):
@@ -76,6 +84,11 @@ class PartsController:
             man_id = int(self.add_view.manufacturer_id.get())
             min_amount = int(self.add_view.min_amount.get())
             max_amount = int(self.add_view.max_amount.get())
+
+            if not man_id:
+                print("Érvénytelen gyártó!")
+                return
+
         except ValueError:
             print("Az ár, készlet és gyártó ID mezőkbe csak számot írhatsz!")
             return
@@ -84,7 +97,7 @@ class PartsController:
             print("Kérlek tölts ki minden mezőt!")
             return
 
-        new_part = Parts(
+        new_parts = Parts(
             part_number=part_num,
             name=name,
             type=part_type,
@@ -92,21 +105,68 @@ class PartsController:
             amount=amount,
             min_amount=min_amount,
             max_amount=max_amount,
-            manufacturer_id=man_id
+            manufacturer_id=man_id,
+            image_path= getattr(self, 'current_add_image_path', None)
         )
 
         with Sessionlocal() as session:
             try:
-                session.add(new_part)
+                session.add(new_parts)
                 session.commit()
-                print("Sikeresen mentve az adatbázisba!")
+                print("Sikeresen mentés")
                 self.add_view.destroy()
-
                 self.load_parts()
-
             except Exception as e:
                 session.rollback()
-                print("Hiba történt a mentés során:", e)
+                print("Hiba történt mentés közben: ", e)
+
+    def upload_image(self):
+        filepath = filedialog.askopenfilename(
+            title="Válasz egy képet",
+            filetypes=[("Képfájlok", "*.png *.jpg *.jpeg")]
+        )
+
+        if not filepath:
+            return
+
+        os.makedirs("assets/img", exist_ok=True)
+        filename = os.path.basename(filepath)
+        destination = os.path.join("assets/img", filename)
+
+        shutil.copy(filepath, destination)
+
+        pil_image = Image.open(destination)
+
+        ctk_image = customtkinter.CTkImage(light_image=pil_image,dark_image=pil_image, size=(150,150))
+
+        self.edit_view.image_label.configure(image=ctk_image, text="")
+        self.edit_view.image_label.image=ctk_image
+
+        self.current_image_path = destination
+
+    def upload_add_image(self):
+        filepath = filedialog.askopenfilename(
+            title="Válasz egy képet",
+            filetypes=[("Képfájlok", "*.png *.jpg *.jpeg")]
+        )
+
+        if not filepath:
+            return
+
+        os.makedirs("assets/img", exist_ok=True)
+        filename = os.path.basename(filepath)
+        destination = os.path.join("assets/img", filename)
+
+        shutil.copy(filepath, destination)
+
+        pil_image = Image.open(destination)
+
+        ctk_image = customtkinter.CTkImage(light_image=pil_image,dark_image=pil_image, size=(150,150))
+
+        self.add_view.image_label.configure(image=ctk_image, text="")
+        self.add_view.image_label.image=ctk_image
+
+        self.current_add_image_path = destination
 
     def open_edit_popup(self):
         choosed_line = self.view.tree.selection()
@@ -138,7 +198,17 @@ class PartsController:
             self.edit_view.min_amount.insert(0, str(part_to_edit.min_amount))
             self.edit_view.max_amount.insert(0,str(part_to_edit.max_amount))
             self.edit_view.manufacturer_id.insert(0, str(part_to_edit.manufacturer_id))
+            self.current_image_path = part_to_edit.image_path
 
+            if self.current_image_path and os.path.exists(self.current_image_path):
+                pil_image = Image.open(self.current_image_path)
+                ctk_image = customtkinter.CTkImage(light_image=pil_image, dark_image=pil_image, size=(150,150))
+                self.edit_view.image_label.configure(image=ctk_image, text="")
+                self.edit_view.image_label.image=ctk_image
+            else:
+                self.edit_view.image_label.configure(text="Nincs kép")
+
+            self.edit_view.upload_button.configure(command=self.upload_image)
             self.edit_view.save_button.configure(command=self.save_edited_part)
 
     def save_edited_part(self):
@@ -152,6 +222,7 @@ class PartsController:
             man_id = int(self.edit_view.manufacturer_id.get())
             min_amount = int(self.edit_view.min_amount.get())
             max_amount = int(self.edit_view.max_amount.get())
+
             if not man_id:
                 print("Érvénytelen gyártó!")
                 return
@@ -171,13 +242,15 @@ class PartsController:
             "amount": amount,
             "min_amount":min_amount,
             "max_amount":max_amount,
-            "manufacturer_id": man_id
+            "manufacturer_id": man_id,
+            "image_path":  getattr(self, 'current_image_path', None)
         }
 
         if self.update_part(self.selected_edit_id, new_data):
             print("Sikeresen módosítottad az alkatrészt!")
             self.edit_view.destroy()
             self.load_parts()
+
 
     def update_part(self, part_id, new_data):
         with Sessionlocal() as session:
@@ -192,6 +265,7 @@ class PartsController:
                     part_to_update.min_amount = new_data['min_amount']
                     part_to_update.max_amount = new_data['max_amount']
                     part_to_update.manufacturer_id = new_data['manufacturer_id']
+                    part_to_update.image_path = new_data['image_path']
                     session.commit()
                     return True
                 else:

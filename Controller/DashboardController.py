@@ -1,4 +1,5 @@
 import datetime
+import os.path
 from tkinter import ttk, filedialog, messagebox
 from fpdf import fpdf
 
@@ -116,9 +117,10 @@ class DashboardController:
             pdf.cell(0,10, text=f"Lekérdezés dátuma: {current_date}", align="center",new_x="LMARGIN", new_y="NEXT")
 
             pdf.ln(5)
-            pdf.set_font("Helvetica", style="B", size=10)
-            pdf.cell(40,10, "Cikkszám", border=1, align="center")
-            pdf.cell(90,10, "Megnevezés", border=1, align="center")
+            pdf.set_font("Arial", style="B", size=10)
+            pdf.cell(35,10, "Cikkszám", border=1, align="center")
+            pdf.cell(20,10,"Kép", border=1, align="center")
+            pdf.cell(75,10, "Megnevezés", border=1, align="center")
             pdf.cell(30,10, "Készlet", border=1, align="center")
             pdf.cell(30,10, "Egység ár", border=1, align="center",new_x="LMARGIN", new_y="NEXT")
 
@@ -132,11 +134,20 @@ class DashboardController:
                     safe_part_num = part.part_number[:20]
                 else:
                     safe_part_num = "N/A"
+                row_height = 20
 
-                pdf.cell(40, 10, safe_part_num, border=1, align='C')
-                pdf.cell(90, 10, safe_name, border=1, align='L')
-                pdf.cell(30, 10, f"{part.amount} db", border=1, align='C')
-                pdf.cell(30, 10, f"{part.price} Ft", border=1, new_x="LMARGIN", new_y="NEXT", align='R')
+                pdf.cell(35, row_height, safe_part_num, border=1, align='C')
+                img_x = pdf.get_x()
+                img_y = pdf.get_y()
+                pdf.cell(20,row_height, "", border=1)
+
+                if part.image_path and os.path.exists(part.image_path):
+                    pdf.image(part.image_path, x=img_x+2, y=img_y+2, w=16)
+                else:
+                    pdf.text(img_x+9,img_y+11, "-")
+                pdf.cell(75, row_height, safe_name, border=1, align='L')
+                pdf.cell(30, row_height, f"{part.amount} db", border=1, align='C')
+                pdf.cell(30, row_height, f"{part.price} Ft", border=1, new_x="LMARGIN", new_y="NEXT", align='R')
 
             pdf.output(filepath)
 
