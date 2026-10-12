@@ -16,6 +16,11 @@ def register(app):
     )
     plugin_button.grid(row=6, column=0, padx=20, pady=10)
 
+def calculate_margin(net_price:float, margin_percent:float):
+    profit = net_price * (margin_percent / 100)
+    sell_price = net_price + profit
+    return sell_price, profit
+
 def open_margin_window():
     window = customtkinter.CTkToplevel()
     window.title("Árrés kalkulátor")
@@ -42,8 +47,7 @@ def open_margin_window():
             net_price = float(net_entry.get())
             margin_percent = float(margin_entry.get())
 
-            profit = net_price * (margin_percent / 100)
-            sell_price = net_price + profit
+            sell_price, profit = calculate_margin(net_price, margin_percent)
 
             result_price_label.configure(text=f"Eladási ár: {sell_price:,.0f}Ft")
             result_profit_label.configure(text=f"Tiszta haszon: {profit:,.0f}Ft")
