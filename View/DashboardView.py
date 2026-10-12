@@ -9,7 +9,7 @@ class DashboardView(customtkinter.CTkFrame):
 
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        self.sidebar_frame.grid_rowconfigure(10, weight=1)
 
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Készletkezelő",
                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
@@ -29,7 +29,7 @@ class DashboardView(customtkinter.CTkFrame):
 
         self.logout_button = customtkinter.CTkButton(self.sidebar_frame, text="Kijelentkezés",
                                                      fg_color="red", hover_color="darkred")
-        self.logout_button.grid(row=5, column=0, padx=20, pady=20, sticky="s")
+        self.logout_button.grid(row=10, column=0, padx=20, pady=20, sticky="s")
 
         self.back_button = customtkinter.CTkButton(self.sidebar_frame,text="Vissza")
 

@@ -34,7 +34,7 @@ class DashboardController:
     def clear_main_frame(self):
         for widget in self.view.main_frame.winfo_children():
             widget.destroy()
-        self.view.back_button.grid(row=6, column=0, padx=20, pady=20, sticky="s")
+        self.view.back_button.grid(row=9, column=0, padx=20, pady=20, sticky="s")
 
     def show_transaction(self):
         self.clear_main_frame()
