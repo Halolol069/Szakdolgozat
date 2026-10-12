@@ -18,6 +18,16 @@ def register(app):
     )
     plugin_button.grid(row=8, column=0, padx=20, pady=10)
 
+def read_notes_file(filepath="note.txt"):
+    if os.path.isfile(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            return f.read()
+    return ""
+
+def write_note_file(content: str, filepath="note.txt"):
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(content)
+
 def open_notes():
     window=customtkinter.CTkToplevel()
     window.title("Gyors jegyzet")
@@ -30,15 +40,14 @@ def open_notes():
     textbox = customtkinter.CTkTextbox(window, width=350, height=250)
     textbox.pack(pady=10)
 
-    if os.path.isfile("note.txt"):
-        with open("note.txt", "r", encoding="utf-8") as f:
-            textbox.insert("1.0", f.read())
+    existing_notes = read_notes_file()
+    if existing_notes:
+        textbox.insert("1.0", existing_notes)
 
     def save_note():
         sentences = textbox.get("1.0", "end")
 
-        with open("note.txt", "w", encoding="utf-8") as f:
-            f.write(sentences)
+        write_note_file(sentences)
 
         save_button.configure(text="Sikeres mentés!", fg_color="green")
 
