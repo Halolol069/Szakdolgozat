@@ -17,6 +17,9 @@ def register(app):
     )
     plugin_button.grid(row=7, column=0, padx=20, pady=10)
 
+def calculate_mm(inches:float):
+    return inches * 25.4
+
 def open_frame():
     window=customtkinter.CTkToplevel()
     window.title("Mértékegység-váltó")
@@ -35,7 +38,7 @@ def open_frame():
     def calculate():
         try:
             inches = float(entry.get())
-            mm = inches * 25.4
+            mm = calculate_mm(inches)
             result_label.configure(text=f"Eredmény: {mm:.1f} mm")
         except ValueError:
             result_label.configure(text="Hibás szám!", text_color="red")
