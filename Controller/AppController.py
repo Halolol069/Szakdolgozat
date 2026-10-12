@@ -8,7 +8,8 @@ from Controller import RegisterController as RegisterController
 from Controller import LoginController as LoginController
 from Controller import CompatibilityController as CompatibilityController
 from Controller import DashboardController
-
+import os
+import importlib
 
 class Controller:
     def __init__(self):
@@ -25,6 +26,8 @@ class Controller:
         self.login.register_button.configure(command=self.show_register)
 
         self.app.show_frame(self.login)
+        self.load_plugins()
+
         self.app.mainloop()
     def show_register(self):
         self.app.show_frame(self.register)
@@ -44,5 +47,31 @@ class Controller:
 
     def show_transaction(self):
         self.app.show_frame(self.transaction)
+
+    def load_plugins(self):
+        plugin_folder = "plugins"
+
+        if not os.path.exists(plugin_folder):
+            os.makedirs(plugin_folder)
+            return
+
+        print("Pluginok keresése")
+
+        for filename in os.listdir(plugin_folder):
+            if filename.endswith(".py") and not filename.startswith("__"):
+                module_name = filename[:-3]
+
+                try:
+                    module = importlib.import_module(f"{plugin_folder}.{module_name}")
+
+                    if hasattr(module, "register"):
+                        module.register(self)
+                    else:
+                        print(f"A(z) {module_name} nem tartalmazza a 'register' függvényt.")
+                except Exception as e:
+                    print(f"Nem sikerült betölteni a {module_name} plugint. {e}")
+
+
+
 if __name__ == '__main__':
     controller = Controller()
