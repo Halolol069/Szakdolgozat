@@ -15,6 +15,9 @@ def register(app):
     )
     plugin_button.grid(row=5, column=0,padx=20, pady=10)
 
+def calculate_huf(euro:float):
+    return euro *395
+
 def open_currency_window():
     window = customtkinter.CTkToplevel()
     window.title("Valutaváltó plugin")
@@ -34,7 +37,7 @@ def open_currency_window():
     def calculate():
         try:
             eur = float(entry.get())
-            huf = eur * 395
+            huf = calculate_huf(eur)
             result_label.configure(text=f"Eredmény: {huf:,.0f}Ft")
         except ValueError:
             result_label.configure(text="Kérlek számot adj meg!",text_color="red")
