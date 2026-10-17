@@ -185,70 +185,185 @@ def seed_examples():
         if not admin_pw:
             raise ValueError("ERROR: DEFAULT_ADMIN_PW not set!")
         hashed_password = bcrypt.hashpw(admin_pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-        session.add(User(name="asd3", password=hashed_password, email="asd@gmail.com",phone="+214586453",role_id=1))
+        worker_pw = os.getenv("DEFAULT_WORKER_PW")
+        if not worker_pw:
+            raise ValueError("ERROR: DEFAULT_WORKER_PW not set!")
+        hashed_password2 = bcrypt.hashpw(worker_pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        session.add(User(id=1,name="asd3", password=hashed_password, email="asd@gmail.com",phone="+214586453",role_id=1))
+        session.add(User(id=2, name="raktaros", password=hashed_password2, email="raktaros@gmail.com", phone="+36309876543",role_id=2))
 
-        old = datetime.datetime.now()-datetime.timedelta(days=50)
-        new = datetime.datetime.now()-datetime.timedelta(days=5)
+        session.add_all([
+            VehicleBrand(id=1, name="Ford",country="USA"),
+            VehicleBrand(id=2, name="Ferrari",country="Italia"),
+            VehicleBrand(id=3, name="Opel", country="Germany"),
+            VehicleBrand(id=4, name="Renault", country="France"),
+            VehicleBrand(id=5, name="MZ", country="NDK"),
+            VehicleBrand(id=6, name="Volkswagen", country="Germany"),
+            VehicleBrand(id=7, name="Suzuki", country="Japan"),
+            VehicleBrand(id=8, name="Toyota", country="Japan"),
+            VehicleBrand(id=9, name="BMW", country="Germany"),
+            VehicleBrand(id=10, name="Yamaha", country="Japan"),
 
-        session.add(SellItem(id=1, sell_header_id=1,part_id=1, amount=100,price=5000))
-        session.add(SellItem(id=2,sell_header_id=2,part_id=2, amount=18, price=8000))
-        session.add(SellItem(id=3,sell_header_id=1,part_id=3, amount=30, price=100))
+            Manufacturer(id=1, name="Lemförder"),
+            Manufacturer(id=2, name="Continental"),
+            Manufacturer(id=3, name="MANN-FILTER"),
+            Manufacturer(id=4, name="Valeo"),
+            Manufacturer(id=5, name="Bosch"),
+            Manufacturer(id=6, name="ZF"),
+            Manufacturer(id=7, name="Brembo"),
+            Manufacturer(id=8, name="NGK"),
+            Manufacturer(id=9, name="Castrol"),
+            Manufacturer(id=10, name="SKF"),
+            Manufacturer(id=11, name="Motul"),
+            Manufacturer(id=12, name="D.I.D"),
 
-        session.add(SellHeader(id=1, date=old, number=1))
-        session.add(SellHeader(id=2, date=new, number=2))
+            Fuel(id=1, name="Benzin"),
+            Fuel(id=2, name="Sport Benzin"),
+            Fuel(id=3, name="Diesel"),
+            Fuel(id=4, name="Hybrid"),
 
-        session.add(VehicleBrand(id=1, name="Ford",country="USA"))
-        session.add(VehicleBrand(id=2, name="Ferrari",country="Italia"))
-        session.add(VehicleBrand(id=3, name="Opel", country="Germany"))
-        session.add(VehicleBrand(id=4, name="Renault", country="France"))
+            VehicleType(id=1, name="Személyautó"),
+            VehicleType(id=2, name="Motorkerékpár")
+        ])
+        session.flush()
 
-        session.add(Manufacturer(id=1, name="Lemförder"))
-        session.add(Manufacturer(id=2, name="Continental"))
-        session.add(Manufacturer(id=3, name="MANN-FILTER"))
-        session.add(Manufacturer(id=4, name="Valeo"))
-        session.add(Manufacturer(id=5, name="Bosch"))
-        session.add(Manufacturer(id=6, name="ZF"))
+        session.add_all([
+            Modell(id=1, name="Mustang", vehicleBrand_id=1, generation=6, date=datetime.datetime(2015, 1, 1)),
+            Modell(id=2, name="Testarossa", vehicleBrand_id=2, generation=1, date=datetime.datetime(1984, 1, 1)),
+            Modell(id=3, name="Corsa", vehicleBrand_id=3, generation=5, date=datetime.datetime(2019, 1, 1)),
+            Modell(id=4, name="Clio", vehicleBrand_id=4, generation=5, date=datetime.datetime(2019, 1, 1)),
+            Modell(id=5, name="TS-125", vehicleBrand_id=5, generation=1, date=datetime.datetime(1973, 1, 1)),
+            Modell(id=6, name="Golf", vehicleBrand_id=6, generation=7, date=datetime.datetime(2012, 1, 1)),
+            Modell(id=7, name="Passat", vehicleBrand_id=6, generation=8, date=datetime.datetime(2014, 1, 1)),
+            Modell(id=8, name="Swift", vehicleBrand_id=7, generation=4, date=datetime.datetime(2017, 1, 1)),
+            Modell(id=9, name="Vitara", vehicleBrand_id=7, generation=4, date=datetime.datetime(2015, 1, 1)),
+            Modell(id=10, name="Corolla", vehicleBrand_id=8, generation=12, date=datetime.datetime(2018, 1, 1)),
+            Modell(id=11, name="3-as sorozat", vehicleBrand_id=9, generation=6, date=datetime.datetime(2011, 1, 1)),
+            Modell(id=12, name="MT-07", vehicleBrand_id=10, generation=1, date=datetime.datetime(2014, 1, 1)),
+            Engine(id=1, engine_code="coyote v8", horse_power=500, ccc=5000, vehicleBrand_id=1, fuel_id=1),
+            Engine(id=2, engine_code="italian v12", horse_power=390, ccc=4900, vehicleBrand_id=2, fuel_id=2),
+            Engine(id=3, engine_code="TS125", horse_power=12, ccc=125, vehicleBrand_id=5, fuel_id=1),
+            Engine(id=4, engine_code="1.2 Ecotec", horse_power=60, ccc=1200, vehicleBrand_id=3, fuel_id=1),
+            Engine(id=5, engine_code="1.4 TCe", horse_power=88, ccc=1400, vehicleBrand_id=4, fuel_id=1),
+            Engine(id=6, engine_code="1.9 TDI", horse_power=105, ccc=1896, vehicleBrand_id=6, fuel_id=3),
+            Engine(id=7, engine_code="2.0 TDI", horse_power=150, ccc=1968, vehicleBrand_id=6, fuel_id=3),
+            Engine(id=8, engine_code="1.2 Dualjet", horse_power=90, ccc=1242, vehicleBrand_id=7, fuel_id=1),
+            Engine(id=9, engine_code="1.8 HSD", horse_power=122, ccc=1798, vehicleBrand_id=8, fuel_id=4),
+            Engine(id=10, engine_code="2.0d", horse_power=184, ccc=1995, vehicleBrand_id=9, fuel_id=3),
+            Engine(id=11, engine_code="CP2", horse_power=75, ccc=689, vehicleBrand_id=10, fuel_id=1),
+            Parts(id=1, part_number="MNF-001", manufacturer_id=3, name="Levegőszűrő", type="Szűrő", price=4500,
+                  amount=50, min_amount=10, max_amount=100),
+            Parts(id=2, part_number="BSC-002", manufacturer_id=5, name="Olajszűrő", type="Szűrő", price=3200, amount=85,
+                  min_amount=20, max_amount=150),
+            Parts(id=3, part_number="VLO-003", manufacturer_id=4, name="Kuplung szett", type="Hajtáslánc", price=85000,
+                  amount=5, min_amount=2, max_amount=15),
+            Parts(id=4, part_number="BRM-004", manufacturer_id=7, name="Első fékbetét szett", type="Fékrendszer",
+                  price=18500, amount=30, min_amount=5, max_amount=50),
+            Parts(id=5, part_number="BRM-005", manufacturer_id=7, name="Féktárcsa", type="Fékrendszer", price=25000,
+                  amount=24, min_amount=4, max_amount=40),
+            Parts(id=6, part_number="NGK-006", manufacturer_id=8, name="Gyújtógyertya", type="Gyújtás", price=4800,
+                  amount=120, min_amount=16, max_amount=200),
+            Parts(id=7, part_number="CST-007", manufacturer_id=9, name="Motorolaj 5W30 (5L)", type="Kenőanyag",
+                  price=16500, amount=45, min_amount=10, max_amount=100),
+            Parts(id=8, part_number="SKF-008", manufacturer_id=10, name="Vízpumpa", type="Hűtés", price=21000,
+                  amount=12, min_amount=3, max_amount=25),
+            Parts(id=9, part_number="CNT-009", manufacturer_id=2, name="Vezérműszíj készlet", type="Motor alkatrész",
+                  price=45000, amount=8, min_amount=2, max_amount=15),
+            Parts(id=10, part_number="VAL-010", manufacturer_id=4, name="H7 Izzó", type="Világítás", price=2500,
+                  amount=200, min_amount=20, max_amount=500),
+            Parts(id=11, part_number="ZFF-011", manufacturer_id=6, name="Kettőstömegű lendkerék", type="Hajtáslánc",
+                  price=165000, amount=2, min_amount=1, max_amount=5),
+            Parts(id=12, part_number="LMF-012", manufacturer_id=1, name="Lengőkar", type="Futómű", price=32000,
+                  amount=16, min_amount=4, max_amount=30),
+            Parts(id=13, part_number="MOT-013", manufacturer_id=11, name="Motul 7100 10W-40 (4L)", type="Kenőanyag",
+                  price=19500, amount=30, min_amount=5, max_amount=50),
+            Parts(id=14, part_number="DID-014", manufacturer_id=12, name="D.I.D Láncszett", type="Hajtáslánc",
+                  price=45000, amount=8, min_amount=2, max_amount=20),
+            Parts(id=15, part_number="HLL-015", manufacturer_id=5, name="Xenon vezérlő elektronika", type="Világítás",
+                  price=125000, amount=2, min_amount=1, max_amount=5),
+            Parts(id=16, part_number="SKF-016", manufacturer_id=10, name="Kardántengely csapágy", type="Hajtáslánc",
+                  price=18000, amount=3, min_amount=2, max_amount=10),
+            Parts(id=17, part_number="KLK-017", manufacturer_id=1, name="Kipufogó tartó bak", type="Kipufogó rendszer",
+                  price=3500, amount=1, min_amount=5, max_amount=20)
+        ])
 
-        session.add(Modell(id=1, name="Mustang", vehicleBrand_id=1, generation=6, date=datetime.datetime(2015, 1, 1)))
-        session.add(Modell(id=2, name="Tessa Rosa", vehicleBrand_id=2, generation=1,date=datetime.datetime(1984, 1, 1)))
-        session.add(Modell(id=3, name="Corsa", vehicleBrand_id=3, generation=5, date=datetime.datetime(2019, 1, 1)))
-        session.add(Modell(id=4, name="Clio", vehicleBrand_id=4, generation=5, date=datetime.datetime(2019, 1, 1)))
+        session.flush()
 
-        session.add(Engine(id=1,engine_code="coyote v8",horse_power=500, ccc=5000, vehicleBrand_id=1,fuel_id=1))
-        session.add(Engine(id=2,engine_code="italian v10",horse_power=690,ccc=6000, vehicleBrand_id=2, fuel_id=2))
-        session.add(Engine(id=4, engine_code="1.2", horse_power=60, ccc=1200, vehicleBrand_id=3, fuel_id=1))
-        session.add(Engine(id=5, engine_code="1.4", horse_power=88, ccc=1400, vehicleBrand_id=4, fuel_id=2))
+        session.add_all([
+            Vehicle(id=1, vehicle_type_id=1, modell_id=1),
+            Vehicle(id=2, vehicle_type_id=1, modell_id=6),
+            Vehicle(id=3, vehicle_type_id=1, modell_id=8),
+            Vehicle(id=4, vehicle_type_id=1, modell_id=10),
+            Vehicle(id=5, vehicle_type_id=1, modell_id=11),
+            Vehicle(id=6, vehicle_type_id=2, modell_id=5),
+            Vehicle(id=7, vehicle_type_id=2, modell_id=12),
+            MotorCompatibility(id=1, modell_id=1, engine_id=1),
+            MotorCompatibility(id=2, modell_id=2, engine_id=2),
+            MotorCompatibility(id=3, modell_id=6, engine_id=6),
+            MotorCompatibility(id=4, modell_id=7, engine_id=7),
+            MotorCompatibility(id=5, modell_id=8, engine_id=8),
+            MotorCompatibility(id=6, modell_id=10, engine_id=9),
+            MotorCompatibility(id=7, modell_id=11, engine_id=10),
+            MotorCompatibility(id=8, modell_id=5, engine_id=3),
+            MotorCompatibility(id=9, modell_id=12, engine_id=11),
 
-        session.add(MotorCompatibility(id=1,modell_id=1, engine_id=1 ))
-        session.add(MotorCompatibility(id=2,modell_id=2, engine_id=2 ))
-        session.add(MotorCompatibility(id=3,modell_id=3, engine_id=3 ))
-        session.add(MotorCompatibility(id=4,modell_id=4, engine_id=4 ))
+            Compatibility(id=1, part_id=4, modell_id=6, engine_id=6),
+            Compatibility(id=2, part_id=7, modell_id=6, engine_id=6),
+            Compatibility(id=3, part_id=7, modell_id=8, engine_id=8),
+            Compatibility(id=4, part_id=6, modell_id=8, engine_id=8),
+            Compatibility(id=5, part_id=11, modell_id=7, engine_id=7),
+            Compatibility(id=6, part_id=6, modell_id=5, engine_id=3),
+            Compatibility(id=7, part_id=13, modell_id=12, engine_id=11),
+            Compatibility(id=8, part_id=14, modell_id=12, engine_id=11)
+        ])
+        session.flush()
 
-        session.add(Fuel(id=1, name="Gasoline"))
-        session.add(Fuel(id=2, name="Sport Fuel"))
-        session.add(Fuel(id=3, name="Diesel"))
+        now = datetime.datetime.now()
 
+        session.add_all([
+            SellHeader(id=1, date=now - datetime.timedelta(days=25), number=10001),
+            SellHeader(id=2, date=now - datetime.timedelta(days=20), number=10002),
+            SellHeader(id=3, date=now - datetime.timedelta(days=15), number=10003),
+            SellHeader(id=4, date=now - datetime.timedelta(days=10), number=10004),
+            SellHeader(id=5, date=now - datetime.timedelta(days=5), number=10005),
+            SellHeader(id=6, date=now - datetime.timedelta(days=2), number=10006),
+            SellHeader(id=7, date=now - datetime.timedelta(days=1), number=10007),
+            SellHeader(id=8, date=now - datetime.timedelta(days=0), number=10008)
+        ])
+        session.flush()
 
-        session.add(Parts(id=1, part_number="MNF-001",manufacturer_id=1,name="Fékbetét",type="Fékrendszer",price=5000,amount=110,min_amount=2, max_amount=30))
-        session.add(Parts(id=2, part_number="BSC-002",manufacturer_id=5,name="Fékbetét",type="Fékrendszer",price=5000,amount=20,min_amount=2, max_amount=30))
-        session.add(Parts(id=3, part_number="VLO-003",manufacturer_id=4,name="Fékbetét",type="Fékrendszer",price=5000,amount=2,min_amount=2, max_amount=30))
-
-        session.add(VehicleType(id=1, name="Személyautó"))
-        session.add(VehicleType(id=2, name="Motorkerékpár"))
-
-        session.add(VehicleBrand(id=5, name="MZ", country="NDK"))
-        session.add(Modell(id=5, name="TS-125", vehicleBrand_id=5, generation=1, date=datetime.datetime(2015, 1, 1)))
-        session.add(Engine(id=3, engine_code="TS125", horse_power=12, ccc=125, vehicleBrand_id=5, fuel_id=1))
-        session.add(MotorCompatibility(id=5, modell_id=5, engine_id=3))
-
-        session.add(Vehicle(id=1, vehicle_type_id=1, modell_id=1))
-        session.add(Vehicle(id=2, vehicle_type_id=1, modell_id=2))
-        session.add(Vehicle(id=3, vehicle_type_id=1, modell_id=3))
-        session.add(Vehicle(id=4, vehicle_type_id=1, modell_id=4))
-        session.add(Vehicle(id=5, vehicle_type_id=2, modell_id=5))
+        session.add_all([
+            SellItem(id=1, sell_header_id=1, part_id=7, amount=1, price=16500),
+            SellItem(id=2, sell_header_id=1, part_id=2, amount=1, price=3200),
+            SellItem(id=3, sell_header_id=1, part_id=1, amount=1, price=4500),
+            TransactionLog(id=1, transaction_type="Eladás", user_id=1, part_id=7, quantity=-1, date=now - datetime.timedelta(days=25)),
+            TransactionLog(id=2, transaction_type="Eladás", user_id=1, part_id=2, quantity=-1, date=now - datetime.timedelta(days=25)),
+            SellItem(id=4, sell_header_id=2, part_id=4, amount=1, price=18500),
+            SellItem(id=5, sell_header_id=2, part_id=5, amount=2, price=25000),
+            TransactionLog(id=3, transaction_type="Eladás", user_id=2, part_id=4, quantity=-1, date=now - datetime.timedelta(days=20)),
+            SellItem(id=6, sell_header_id=3, part_id=10, amount=4, price=2500),
+            TransactionLog(id=4, transaction_type="Eladás", user_id=1, part_id=10, quantity=-4, date=now - datetime.timedelta(days=15)),
+            SellItem(id=7, sell_header_id=4, part_id=11, amount=1, price=165000),
+            SellItem(id=8, sell_header_id=4, part_id=3, amount=1, price=85000),
+            TransactionLog(id=5, transaction_type="Eladás", user_id=2, part_id=11, quantity=-1, date=now - datetime.timedelta(days=10)),
+            SellItem(id=9, sell_header_id=8, part_id=14, amount=1, price=45000),
+            SellItem(id=10, sell_header_id=8, part_id=13, amount=1, price=19500),
+            SellItem(id=11, sell_header_id=8, part_id=6, amount=2, price=4800),
+            TransactionLog(id=8, transaction_type="Eladás", user_id=1, part_id=14, quantity=-1, date=now),
+            TransactionLog(id=9, transaction_type="Eladás", user_id=1, part_id=13, quantity=-1, date=now),
+            TransactionLog(id=6, transaction_type="Bevételezés", user_id=1, part_id=7, quantity=50, date=now - datetime.timedelta(days=3)),
+            TransactionLog(id=7, transaction_type="Bevételezés", user_id=1, part_id=10, quantity=100, date=now - datetime.timedelta(days=3)),
+            TransactionLog(id=12, transaction_type="Bevételezés", user_id=1, part_id=14, quantity=9,
+                           date=now - datetime.timedelta(days=10)),
+            TransactionLog(id=13, transaction_type="Bevételezés", user_id=1, part_id=15, quantity=3,
+                           date=now - datetime.timedelta(days=10)),
+            TransactionLog(id=14, transaction_type="Bevételezés", user_id=1, part_id=16, quantity=5,
+                           date=now - datetime.timedelta(days=10)),
+            TransactionLog(id=15, transaction_type="Bevételezés", user_id=1, part_id=17, quantity=1,
+                           date=now - datetime.timedelta(days=10))
+        ])
 
         session.commit()
-
 if __name__ == '__main__':
     try:
         #Base.metadata.drop_all(engine)
