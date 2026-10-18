@@ -4,8 +4,9 @@ from tkinter import messagebox, filedialog
 
 import customtkinter
 from fpdf import FPDF
+from sqlalchemy import func
 
-from Model.database import Sessionlocal, Parts, TransactionLog
+from Model.database import Sessionlocal, Parts, TransactionLog, SellHeader, SellItem, User
 
 
 class TransactionController:
@@ -34,15 +35,75 @@ class TransactionController:
             except Exception as e:
                 print("Hiba történt az adatbázis mentésekor!",e)
 
+    def load_transaction_history(self):
+        if not hasattr(self.view, 'history_tree'):
+            return
+
+        for item in self.view.history_tree.get_children():
+            self.view.history_tree.delete(item)
+
+        with Sessionlocal() as session:
+            try:
+                logs = (
+                    session.query(TransactionLog, Parts.name, User.name)
+                    .join(Parts, TransactionLog.part_id == Parts.id)
+                    .join(User, TransactionLog.user_id == User.id)
+                    .order_by(TransactionLog.date.desc())
+                    .limit(50)
+                    .all()
+                )
+                for log, part_name, user_name in logs:
+                    formatted_date = log.date.strftime("%Y-%m-%d %H:%M") if log.date else "-"
+                    qty_str = f"+{log.quantity}" if log.quantity > 0 else str(log.quantity)
+                    self.view.history_tree.insert(
+                        "", "end", values=(log.id, formatted_date, log.transaction_type, part_name, qty_str, user_name)
+                    )
+            except Exception as e:
+                print("Hiba a tranzakciós napló betöltésekor:", e)
+
     def save_transaction_log(self, transaction_type, quantity, part_id):
         with Sessionlocal() as session:
-            new_transaction = TransactionLog(transaction_type=transaction_type, user_id=self.main_app.current_user.id,
-                                             quantity=quantity, part_id=part_id)
             current_part = session.query(Parts).filter(Parts.id == part_id).first()
+
+            if self.main_app.current_user.id:
+                user_id = self.main_app.current_user.id
+            else:
+                return 1
+
             if transaction_type == "Bevételezés":
                 current_part.amount += quantity
+                log_qty = quantity
+                log_type = "Bevételezés"
+
             elif transaction_type == "Kiadás":
                 current_part.amount -= quantity
+                log_qty = -quantity
+                log_type = "Eladás"
+
+            max_num = session.query(func.max(SellHeader.number)).scalar() or 10000
+            new_header = SellHeader(
+                date = datetime.datetime.now(),
+                number = max_num + 1
+            )
+            session.add(new_header)
+            session.flush()
+
+            new_item = SellItem(
+                sell_header_id = new_header.id,
+                part_id = current_part.id,
+                amount = quantity,
+                price = current_part.price
+            )
+            session.add(new_item)
+
+            new_transaction = TransactionLog(
+                transaction_type=log_type,
+                user_id = user_id,
+                quantity = log_qty,
+                part_id = part_id,
+                date = datetime.datetime.now()
+            )
+
             session.add(new_transaction)
             session.commit()
 
@@ -63,15 +124,20 @@ class TransactionController:
         if not self.valid_quantity(raw_quantity):
             messagebox.showerror("Hiba", "Kérlek érvényes számot adj meg a mennyiséghez!")
             return
+
         line_datas = self.view.transaction_tree.item(chosed_line[0])["values"]
         chosed_line_id = line_datas[0]
         ptr_type = self.view.transaction_type_menu.get()
         ptr_quantity = int(raw_quantity)
+
         if ptr_type == "Kiadás" and ptr_quantity > line_datas[2]:
             messagebox.showerror("Hiba", "Nem megfelelő mennyiség!")
             return
-        self.save_transaction_log(ptr_type, ptr_quantity, chosed_line_id)
+
+        if self.save_transaction_log(ptr_type, ptr_quantity, chosed_line_id):
+            messagebox.showinfo("Siker", f"{ptr_type} sikeresen rögzítve!")
         self.load_all_parts()
+        self.load_transaction_history()
 
     def generate_receipt(self):
         chosed_line = self.view.transaction_tree.selection()

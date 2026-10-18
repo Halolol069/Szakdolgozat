@@ -2,7 +2,7 @@ import datetime
 import os
 
 import bcrypt
-from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func, Column
+from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func, Column, text
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
@@ -364,6 +364,13 @@ def seed_examples():
         ])
 
         session.commit()
+
+        session.execute(text("SELECT setval('parts_id_seq', (SELECT max(id) FROM parts))"))
+        session.execute(text("SELECT setval('sell_headers_id_seq', (SELECT max(id) FROM sell_headers))"))
+        session.execute(text("SELECT setval('sell_items_id_seq', (SELECT max(id) FROM sell_items))"))
+        session.execute(text("SELECT setval('transaction_logs_id_seq', (SELECT max(id) FROM transaction_logs))"))
+        session.commit()
+
 if __name__ == '__main__':
     try:
         #Base.metadata.drop_all(engine)
