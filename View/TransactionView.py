@@ -31,11 +31,11 @@ class TransactionView(customtkinter.CTkFrame):
         self.transaction_tree.column("Quantity", width=100, anchor="center")
         self.transaction_tree.grid(row=2, columnspan=3, padx=20, pady=20, sticky="nsew")
 
-        self.save_button = customtkinter.CTkButton(master=self, text="Mentés")
-        self.save_button.grid(row=3, column=0, padx=20, pady=20, sticky="nsew")
+        self.to_cart_save_button = customtkinter.CTkButton(master=self, text="Kosárba")
+        self.to_cart_save_button.grid(row=3, column=0, padx=20, pady=20, sticky="nsew")
 
-        self.receipt_button = customtkinter.CTkButton(master=self, text="Szállítólevél")
-        self.receipt_button.grid(row=3, column=1, padx=20, pady=20, sticky="nsew")
+        self.cart_review_button = customtkinter.CTkButton(master=self, text="Kosár megtekintése")
+        self.cart_review_button.grid(row=3, column=1, padx=20, pady=20, sticky="nsew")
 
         self.log_label=customtkinter.CTkLabel(master=self, text="Legutóbbi készletmozgások: ", font=("Arial", 14, "bold"))
         self.log_label.grid(row=4, column=0, padx=20, pady=20, sticky="nsew")
