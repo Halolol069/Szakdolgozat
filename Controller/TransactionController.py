@@ -1,7 +1,6 @@
 import datetime
-import os
 from tkinter import messagebox, filedialog
-
+from View.CartView import CartView
 import customtkinter
 from fpdf import FPDF
 from sqlalchemy import func
@@ -13,10 +12,11 @@ class TransactionController:
     def __init__(self, main_app,view):
         self.main_app = main_app
         self.view = view
+        self.cart = []
         self.load_all_parts()
-        self.view.save_button.configure(command=self.execute_transaction)
+        self.view.to_cart_save_button.configure(command=self.add_to_cart)
         self.view.search_bar.bind("<KeyRelease>", self.load_all_parts)
-        self.view.receipt_button.configure(command=self.generate_receipt)
+        self.view.cart_review_button.configure(command=self.show_cart)
 
     def load_all_parts(self, event=None):
         for item in self.view.transaction_tree.get_children():
@@ -53,66 +53,21 @@ class TransactionController:
                     .all()
                 )
                 for log, part_name, user_name in logs:
-                    formatted_date = log.date.strftime("%Y-%m-%d %H:%M") if log.date else "-"
-                    qty_str = f"+{log.quantity}" if log.quantity > 0 else str(log.quantity)
+                    if log.date:
+                        formatted_date = log.date.strftime("%Y-%m-%d %H:%M")
+                    else:
+                        formatted_date = "-"
+                    if log.quantity > 0:
+                        qty_str = f"+{log.quantity}"
+                    else:
+                        qty_str = str(log.quantity)
                     self.view.history_tree.insert(
                         "", "end", values=(log.id, formatted_date, log.transaction_type, part_name, qty_str, user_name)
                     )
             except Exception as e:
                 print("Hiba a tranzakciós napló betöltésekor:", e)
 
-    def save_transaction_log(self, transaction_type, quantity, part_id):
-        with Sessionlocal() as session:
-            current_part = session.query(Parts).filter(Parts.id == part_id).first()
-
-            if self.main_app.current_user.id:
-                user_id = self.main_app.current_user.id
-            else:
-                return 1
-
-            if transaction_type == "Bevételezés":
-                current_part.amount += quantity
-                log_qty = quantity
-                log_type = "Bevételezés"
-
-            elif transaction_type == "Kiadás":
-                current_part.amount -= quantity
-                log_qty = -quantity
-                log_type = "Eladás"
-
-            max_num = session.query(func.max(SellHeader.number)).scalar() or 10000
-            new_header = SellHeader(
-                date = datetime.datetime.now(),
-                number = max_num + 1
-            )
-            session.add(new_header)
-            session.flush()
-
-            new_item = SellItem(
-                sell_header_id = new_header.id,
-                part_id = current_part.id,
-                amount = quantity,
-                price = current_part.price
-            )
-            session.add(new_item)
-
-            new_transaction = TransactionLog(
-                transaction_type=log_type,
-                user_id = user_id,
-                quantity = log_qty,
-                part_id = part_id,
-                date = datetime.datetime.now()
-            )
-
-            session.add(new_transaction)
-            session.commit()
-
-    def valid_quantity(self, raw_quantity):
-        if not raw_quantity.isdigit() or int(raw_quantity) <= 0:
-            return False
-        return True
-
-    def execute_transaction(self):
+    def add_to_cart(self):
         chosed_line = self.view.transaction_tree.selection()
 
         if not chosed_line:
@@ -121,112 +76,172 @@ class TransactionController:
 
         raw_quantity = self.view.transaction_quantity_menu.get()
 
-        if not self.valid_quantity(raw_quantity):
-            messagebox.showerror("Hiba", "Kérlek érvényes számot adj meg a mennyiséghez!")
-            return
-
-        line_datas = self.view.transaction_tree.item(chosed_line[0])["values"]
-        chosed_line_id = line_datas[0]
-        ptr_type = self.view.transaction_type_menu.get()
-        ptr_quantity = int(raw_quantity)
-
-        if ptr_type == "Kiadás" and ptr_quantity > line_datas[2]:
-            messagebox.showerror("Hiba", "Nem megfelelő mennyiség!")
-            return
-
-        if self.save_transaction_log(ptr_type, ptr_quantity, chosed_line_id):
-            messagebox.showinfo("Siker", f"{ptr_type} sikeresen rögzítve!")
-        self.load_all_parts()
-        self.load_transaction_history()
-
-    def generate_receipt(self):
-        chosed_line = self.view.transaction_tree.selection()
-
-        if not chosed_line:
-            messagebox.showerror("Hiba", "Kérlek válasz ki egy alkatrészt a bizonylathoz!")
-            return
-
-        raw_quantity = self.view.transaction_quantity_menu.get()
-
-        if not self.valid_quantity(raw_quantity):
-            messagebox.showerror("Hiba", "Kérlek adj meg érvényes számot a mennyiséghez")
-            return
-
-        dialog = customtkinter.CTkInputDialog(text='Kérlek add meg a vevő nevét: ', title="Vevő neve")
-        buyer_name = dialog.get_input()
-
-        if not buyer_name:
+        if not raw_quantity:
+            messagebox.showerror("Hiba", "Kérlek érvényes számot adj meg!")
             return
 
         line_datas = self.view.transaction_tree.item(chosed_line[0])["values"]
         part_id = line_datas[0]
         part_name = line_datas[1]
-        quantity = int(raw_quantity)
+        current_stock = int(line_datas[2])
+
+        ptr_type = self.view.transaction_type_menu.get()
+        if len(self.cart) > 0:
+            current_cart_type = self.cart[0]["type"]
+            if ptr_type != current_cart_type:
+                messagebox.showerror("Hiba", f"A kosaradban már {current_cart_type} típusú tételek vannak!")
+                return
+
+        ptr_quantity = int(raw_quantity)
+        if ptr_type == "Kiadás" and ptr_quantity > current_stock:
+            messagebox.showerror("Hiba", f"Nincs elegendő készlet! (Elérhető: {current_stock} db)")
+            return
 
         with Sessionlocal() as session:
             part = session.query(Parts).filter(Parts.id == part_id).first()
-            if part.price:
+            if part and part.price:
                 price = part.price
             else:
                 price = 0
-            total_price = price * quantity
-            part_image_path = part.image_path
+
+            cart_item = {
+                "part_id": part_id,
+                "name": part_name,
+                "type": ptr_type,
+                "quantity": ptr_quantity,
+                "price": price,
+                "total": price * ptr_quantity
+            }
+
+            self.cart.append(cart_item)
+            self.load_transaction_history()
+
+        messagebox.showinfo("Siker", f"{part_name} ({ptr_quantity} db) került be a kosárba!")
+        self.view.transaction_quantity_menu.delete(0,"end")
+
+    def show_cart(self):
+        if not self.cart:
+            messagebox.showwarning("Üres kosár", "A kosarad jelenleg üres!")
+            return
+
+        CartView(self.view, self.cart, self.execute_cart_transaction)
+
+    def execute_cart_transaction(self):
+        if not self.cart:
+            return False
+
+        cart_type = self.cart[0]["type"]
+        buyer_name = "-"
+
+        if cart_type == "Kiadás":
+            dialog = customtkinter.CTkInputDialog(text='Kérlek add meg a vevő nevét: ', title="Vevő neve")
+            buyer_name = dialog.get_input()
+            if not buyer_name:
+                return False
 
         filepath = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF", "*.pdf")],
             title="Szállítólevél mentése"
         )
-
         if not filepath:
-            return
+            return False
 
+        with Sessionlocal() as session:
+            user_id = self.main_app.current_user.id if self.main_app.current_user else 1
+
+            max_num = session.query(func.max(SellHeader.number)).scalar() or 10000
+            new_header = SellHeader(date=datetime.datetime.now(), number=max_num + 1)
+            session.add(new_header)
+            session.flush()
+
+            for item in self.cart:
+                current_part = session.query(Parts).filter(Parts.id == item["part_id"]).first()
+
+                if cart_type == "Bevételezés":
+                    current_part.amount += item["quantity"]
+                    log_qty = item["quantity"]
+                    log_type = "Bevételezés"
+                else:
+                    current_part.amount -= item["quantity"]
+                    log_qty = -item["quantity"]
+                    log_type = "Eladás"
+
+                new_item = SellItem(
+                    sell_header_id=new_header.id,
+                    part_id=current_part.id,
+                    amount=item["quantity"],
+                    price=current_part.price
+                )
+                session.add(new_item)
+
+                new_transaction = TransactionLog(
+                    transaction_type=log_type,
+                    user_id=user_id,
+                    quantity=log_qty,
+                    part_id=item["part_id"],
+                    date=datetime.datetime.now()
+                )
+                session.add(new_transaction)
+            session.commit()
+
+        self.generate_batch_receipt(filepath, buyer_name, cart_type)
+
+        messagebox.showinfo("Siker", f"A tranzakció sikeresen rögzítve, PDF legenerálva!")
+        self.cart.clear()
+        self.load_all_parts()
+        self.load_transaction_history()
+        return True
+    def generate_batch_receipt(self, filepath, buyer_name, cart_type):
         try:
             pdf = FPDF()
             pdf.add_page()
-
-            pdf.add_font("Arial","", "assets/fonts/arial.ttf")
-            pdf.add_font("Arial","B", "assets/fonts/arialbd.ttf")
+            pdf.add_font("Arial", "", "assets/fonts/arial.ttf")
+            pdf.add_font("Arial", "B", "assets/fonts/arialbd.ttf")
             pdf.add_font("Arial", "I", "assets/fonts/ariali.ttf")
 
-            pdf.set_font("Arial", "B",16)
-            pdf.cell(0,10, text="Szállítólevél", new_x="LMARGIN", new_y="NEXT", align="center")
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, text="Szállítólevél", new_x="LMARGIN", new_y="NEXT", align="center")
             pdf.ln(10)
 
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(0,8, text=f"Dátum: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", new_x="LMARGIN", new_y="NEXT", align="center")
-            pdf.cell(0,8,text=f"Vevő neve: {buyer_name}", new_x="LMARGIN", new_y="NEXT", align="center")
+            pdf.cell(0, 8, text=f"Dátum: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", new_x="LMARGIN",
+                     new_y="NEXT", align="center")
+            pdf.cell(0, 8, text=f"Tranzakció típusa: {cart_type}", new_x="LMARGIN", new_y="NEXT", align="center")
+            if cart_type == "Kiadás":
+                pdf.cell(0, 8, text=f"Vevő neve: {buyer_name}", new_x="LMARGIN", new_y="NEXT", align="center")
             pdf.ln(10)
 
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(90,10,"Megnevezés", border=1, align="L")
-            pdf.cell(30,10, "Mennyiség", border=1, align="L")
-            pdf.cell(35,10, "Egységár", border=1, align="R")
-            pdf.cell(35,10, "Összesen", border=1, align="R", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(90, 10, "Megnevezés", border=1, align="L")
+            pdf.cell(30, 10, "Mennyiség", border=1, align="C")
+            pdf.cell(35, 10, "Egységár", border=1, align="R")
+            pdf.cell(35, 10, "Összesen", border=1, align="R", new_x="LMARGIN", new_y="NEXT")
 
+            pdf.set_font("Arial", "", 12)
+            grand_total = 0
+            for item in self.cart:
+                safe_name = item["name"][:40]
+                pdf.cell(90, 10, safe_name, border=1, align="L")
+                pdf.cell(30, 10, f"{item['quantity']} db", border=1, align="C")
+                pdf.cell(35, 10, f"{item['price']} Ft", border=1, align="R")
+                pdf.cell(35, 10, f"{item['total']} Ft", border=1, align="R", new_x="LMARGIN", new_y="NEXT")
+                grand_total += item["total"]
+
+            pdf.ln(5)
             pdf.set_font("Arial", "B", 12)
-            safe_name = part_name[:40]
-            pdf.cell(90,10, safe_name, border=1, align="L")
-            pdf.cell(30,10, f"{quantity} db", border=1, align="center")
-            pdf.cell(35,10, f"{price} Ft", border=1, align="R")
-            pdf.cell(35,10, f"{total_price} Ft", border=1, align="R", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(155, 10, "Végösszeg:", align="R")
+            pdf.cell(35, 10, f"{grand_total} Ft", align="R", new_x="LMARGIN", new_y="NEXT")
 
-            if part_image_path and os.path.exists(part_image_path):
-                pdf.ln(10)
-                pdf.set_font("Arial", "B", 10)
-                pdf.cell(0,10,"A megvásárolt alkatrész: ", new_x="LMARGIN", new_y="NEXT", align="C")
-
-                pdf.image(part_image_path, x=85, y=pdf.get_y(), w=40)
-                pdf.ln(45)
-            else:
-                pdf.ln(20)
-
+            pdf.ln(20)
             pdf.set_font("Arial", "I", 10)
-            pdf.cell(0,10, "Köszönjük a vásárlást!", align="center")
+            pdf.cell(0, 10, "Köszönjük!", align="center")
 
             pdf.output(filepath)
-            messagebox.showinfo("Siker", f"A szállítólevél sikeresen elmentve!")
         except Exception as e:
             print(f"Hiba a pdf generálásakor: {e}")
-            messagebox.showerror("Hiba", "Nem sikerült legenerálni a PDF-et.")
 
+    def valid_quantity(self, raw_quantity):
+        if not raw_quantity.isdigit() or int(raw_quantity) <= 0:
+            return False
+        return True
