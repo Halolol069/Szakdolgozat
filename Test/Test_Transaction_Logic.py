@@ -30,10 +30,10 @@ class DummyTree:
 
 class DummyView:
     def __init__(self):
-        self.save_button = DummyButton()
+        self.to_cart_save_button = DummyButton()
         self.search_bar = DummyEntry()
         self.transaction_tree = DummyTree()
-        self.receipt_button = DummyButton()
+        self.cart_review_button = DummyButton()
 
 
 class DummyApp:
@@ -67,7 +67,10 @@ class Test_Transaction_Logic(Test_base):
                          "A betűket tartalmazó szöveget érvénytelennek kellene tekinteni!")
         self.assertFalse(self.controller.valid_quantity(""), "Az üres mezőt érvénytelennek kellene tekinteni!")
 
-    def test_save_transaction_log(self):
+    @unittest.mock.patch('Controller.TransactionController.messagebox.showinfo')
+    @unittest.mock.patch('Controller.TransactionController.TransactionController.generate_batch_receipt')
+    @unittest.mock.patch('Controller.TransactionController.filedialog.asksaveasfilename', return_value="teszt.pdf")
+    def test_execute_cart_transaction_income(self,*mock_args):
         with Sessionlocal() as session:
             test_part = Parts(
                 id=999, name="TesztFék", manufacturer_id=1, part_number="TF-01",
@@ -75,13 +78,23 @@ class Test_Transaction_Logic(Test_base):
             )
             session.add(test_part)
             session.commit()
-        self.controller.save_transaction_log(transaction_type="Bevételezés", quantity=5, part_id=999)
+
+        self.controller.cart = [{
+            "part_id": 999, "name": "TesztFék", "type": "Bevételezés",
+            "quantity": 5, "price": 10000, "total": 50000
+        }]
+        self.controller.execute_cart_transaction()
 
         with Sessionlocal() as session:
             updated_part = session.query(Parts).filter_by(id=999).first()
             self.assertEqual(15, updated_part.amount, "A bevételezés után a mennyiségnek 15-nek kell lennie!")
 
-    def test_save_transaction_log_expense(self):
+    @unittest.mock.patch('Controller.TransactionController.messagebox.showinfo')
+    @unittest.mock.patch('Controller.TransactionController.TransactionController.generate_batch_receipt')
+    @unittest.mock.patch('Controller.TransactionController.filedialog.asksaveasfilename', return_value="teszt.pdf")
+    @unittest.mock.patch('Controller.TransactionController.customtkinter.CTkInputDialog.get_input',
+                         return_value="Teszt Vevő")
+    def test_execute_cart_transaction_expense(self,*mock_args):
         with Sessionlocal() as session:
             test_part = Parts(
                 id=888, name="TesztLámpa", manufacturer_id=1, part_number="TL-01",
@@ -89,12 +102,16 @@ class Test_Transaction_Logic(Test_base):
             )
             session.add(test_part)
             session.commit()
-        self.controller.save_transaction_log(transaction_type="Kiadás", quantity=3, part_id=888)
+
+        self.controller.cart = [{
+            "part_id": 888, "name": "TesztLámpa", "type": "Kiadás",
+            "quantity": 3, "price": 5000, "total": 15000
+        }]
+        self.controller.execute_cart_transaction()
 
         with Sessionlocal() as session:
             updated_part = session.query(Parts).filter_by(id=888).first()
             self.assertEqual(7, updated_part.amount, "A kiadás után a mennyiségnek 7-nek kell lennie!")
-
 
     def tearDown(self):
         Base.metadata.drop_all(self.test_engine)

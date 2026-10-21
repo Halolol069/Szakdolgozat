@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
 from typing import List
+ROLE_ADMIN = 1
+ROLE_WORKER = 2
 
 dotenv = load_dotenv()
 database_url = f"{os.getenv('DB_CONNECTION')}://{os.getenv('DB_USERNAME')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_DATABASE')}"
@@ -23,19 +25,19 @@ class User(Base):
     phone:Mapped[str] = mapped_column(unique=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
     role: Mapped["Role"] = relationship(back_populates="users")
-    transaction_logs:Mapped[List["TransactionLog"]] = relationship(back_populates="users", cascade="all, delete-orphan")
+    transaction_logs:Mapped[List["TransactionLog"]] = relationship(back_populates="users")
 
 class Role(Base):
     __tablename__ = "roles"
     id:Mapped[int] = mapped_column(primary_key=True)
     name:Mapped[str] = mapped_column(unique=True)
-    users:Mapped[List["User"]] = relationship(back_populates="role", cascade="all, delete-orphan")
+    users:Mapped[List["User"]] = relationship(back_populates="role")
 
 class Manufacturer(Base):
     __tablename__ = "manufacturers"
     id:Mapped[int] = mapped_column(primary_key=True)
     name:Mapped[str] = mapped_column(String(50))
-    parts:Mapped[List["Parts"]] = relationship(back_populates="manufacturer", cascade="all, delete-orphan")
+    parts:Mapped[List["Parts"]] = relationship(back_populates="manufacturer")
 
 class VehicleBrand(Base):
     __tablename__ = "vehiclebrands"
@@ -58,16 +60,16 @@ class Parts(Base):
     part_number:Mapped[str] = mapped_column(String(150))
     manufacturer_id:Mapped[int] = mapped_column(ForeignKey("manufacturers.id"))
     manufacturer:Mapped["Manufacturer"] = relationship(back_populates="parts")
-    sell_items:Mapped[List["SellItem"]] = relationship(back_populates="part", cascade="all, delete-orphan")
+    sell_items:Mapped[List["SellItem"]] = relationship(back_populates="part")
     compatibilities:Mapped[List["Compatibility"]] = relationship(back_populates="part", cascade="all, delete-orphan")
-    transaction_logs:Mapped[List["TransactionLog"]] = relationship(back_populates="part", cascade="all, delete-orphan")
+    transaction_logs:Mapped[List["TransactionLog"]] = relationship(back_populates="part")
     name:Mapped[str] = mapped_column(String(50))
     type:Mapped[str] = mapped_column(String(50))
     price:Mapped[int] = mapped_column(Integer)
     amount:Mapped[int] = mapped_column(Integer)
     min_amount:Mapped[int] = mapped_column(Integer)
     max_amount:Mapped[int] = mapped_column(Integer)
-    image_path = Column(String, nullable = True)
+    image_path:Mapped[str | None] = mapped_column(String, nullable = True)
 
 class Fuel(Base):
     __tablename__="fuels"
@@ -97,7 +99,6 @@ class Modell(Base):
     generation:Mapped[int] = mapped_column(Integer)
     date:Mapped[datetime.datetime] = mapped_column(DateTime)
     vehicles:Mapped[List["Vehicle"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
-    types:Mapped[List["Type"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
     compatibilities:Mapped[List["Compatibility"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
     motor_comps:Mapped[List["MotorCompatibility"]] = relationship(back_populates="modell", cascade="all, delete-orphan")
 
@@ -125,12 +126,6 @@ class SellItem(Base):
     amount:Mapped[int] = mapped_column(Integer)
     price:Mapped[int] = mapped_column(Integer)
 
-class Type(Base):
-    __tablename__ = "types"
-    id:Mapped[int] = mapped_column(primary_key=True)
-    modell_id:Mapped[int] = mapped_column(ForeignKey("models.id"))
-    modell:Mapped["Modell"] = relationship(back_populates="types")
-    bodytype:Mapped[str] = mapped_column(String)
 
 class Compatibility(Base):
     __tablename__ = "compatibilities"
@@ -164,17 +159,12 @@ class TransactionLog(Base):
 Sessionlocal = sessionmaker(bind=engine)
 def seed_roles():
     with Sessionlocal() as session:
-        admin_role = session.get(Role,1)
-        if admin_role is None:
-            admin_role = Role(id=1,name="Admin")
-            session.add(admin_role)
-
-        raktaros_role = session.get(Role,2)
-        if raktaros_role is None:
-            raktaros_role = Role(id=2,name="Raktaros")
-            session.add(raktaros_role)
-
+        if session.get(Role, ROLE_ADMIN) is None:
+            session.add(Role(id=ROLE_ADMIN, name="Admin"))
+        if session.get(Role, ROLE_WORKER) is None:
+            session.add(Role(id=ROLE_WORKER, name="Raktaros"))
         session.commit()
+
 def seed_examples():
     with Sessionlocal() as session:
         if session.query(VehicleBrand).count() > 0:
@@ -189,8 +179,8 @@ def seed_examples():
         if not worker_pw:
             raise ValueError("ERROR: DEFAULT_WORKER_PW not set!")
         hashed_password2 = bcrypt.hashpw(worker_pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-        session.add(User(id=1,name="asd3", password=hashed_password, email="asd@gmail.com",phone="+214586453",role_id=1))
-        session.add(User(id=2, name="raktaros", password=hashed_password2, email="raktaros@gmail.com", phone="+36309876543",role_id=2))
+        session.add(User(id=1,name="asd3", password=hashed_password, email="asd@gmail.com",phone="+214586453",role_id=ROLE_ADMIN))
+        session.add(User(id=2, name="raktaros", password=hashed_password2, email="raktaros@gmail.com", phone="+36309876543",role_id=ROLE_WORKER))
 
         session.add_all([
             VehicleBrand(id=1, name="Ford",country="USA"),
@@ -365,7 +355,18 @@ def seed_examples():
 
         session.commit()
 
+        session.execute(text("SELECT setval('users_id_seq', (SELECT max(id) FROM users))"))
+        session.execute(text("SELECT setval('compatibilities_id_seq', (SELECT max(id) FROM compatibilities))"))
         session.execute(text("SELECT setval('parts_id_seq', (SELECT max(id) FROM parts))"))
+        session.execute(text("SELECT setval('motorcompatibilities_id_seq', (SELECT max(id) FROM motorcompatibilities))"))
+        session.execute(text("SELECT setval('models_id_seq', (SELECT max(id) FROM models))"))
+        session.execute(text("SELECT setval('engines_id_seq', (SELECT max(id) FROM engines))"))
+        session.execute(text("SELECT setval('vehicles_id_seq', (SELECT max(id) FROM vehicles))"))
+        session.execute(text("SELECT setval('roles_id_seq', (SELECT max(id) FROM roles))"))
+        session.execute(text("SELECT setval('vehiclebrands_id_seq', (SELECT max(id) FROM vehiclebrands))"))
+        session.execute(text("SELECT setval('manufacturers_id_seq', (SELECT max(id) FROM manufacturers))"))
+        session.execute(text("SELECT setval('fuels_id_seq', (SELECT max(id) FROM fuels))"))
+        session.execute(text("SELECT setval('vehicle_types_id_seq', (SELECT max(id) FROM vehicle_types))"))
         session.execute(text("SELECT setval('sell_headers_id_seq', (SELECT max(id) FROM sell_headers))"))
         session.execute(text("SELECT setval('sell_items_id_seq', (SELECT max(id) FROM sell_items))"))
         session.execute(text("SELECT setval('transaction_logs_id_seq', (SELECT max(id) FROM transaction_logs))"))

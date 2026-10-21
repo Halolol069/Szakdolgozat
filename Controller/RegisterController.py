@@ -1,6 +1,7 @@
 import bcrypt
 
 from Model.database import User, Sessionlocal
+
 class RegisterController:
     def __init__(self,main_app, view):
         self.main_app = main_app
@@ -9,30 +10,30 @@ class RegisterController:
         self.view.back_button.configure(command=self.main_app.show_login)
 
     def registration(self):
-        datas = {"username": self.view.username,
-                 "password":self.view.password,
+        datas = {"felhasználónév": self.view.username,
+                 "jelszó":self.view.password,
                  "email": self.view.email,
-                 "phone": self.view.phone}
+                 "telefonszám": self.view.phone}
         for key, entry_widget in datas.items():
             data = entry_widget.get()
             if not data:
                 entry_widget.delete(0,"end")
-                self.view.error_label.configure(text=f"The {key} is empty, please fill the entries", fg_color="red")
+                self.view.error_label.configure(text=f"A(z) {key} mező üres, kérlek töltsd ki!", text_color="red",fg_color="transparent")
                 return
 
             elif key=="email" and ("@" not in data or "." not in data):
                 entry_widget.delete(0,"end")
-                self.view.error_label.configure(text=f"The {key} is invalid, please use @ and . to fill the entries", fg_color="red")
+                self.view.error_label.configure(text=f"A(z) {key} nem megfelelő, kérlek használj: @ és . kitöltéskor!",text_color="red",fg_color="transparent")
                 return
 
-            elif key=="password" and (6 > len(data)):
+            elif key=="jelszó" and (6 > len(data)):
                 entry_widget.delete(0,"end")
-                self.view.error_label.configure(text=f"The {key} is too short, please use at least 6 characters", fg_color="red")
+                self.view.error_label.configure(text=f"A(z) {key} túl rövid, minimum 6 karaktert kell használni!", text_color="red",fg_color="transparent")
                 return
 
-            elif key=="phone" and not data.replace("+","").isdigit():
+            elif key=="telefonszám" and not data.lstrip("+").isdigit():
                 entry_widget.delete(0,"end")
-                self.view.error_label.configure(text=f"The {key} is invalid, please use numbers!", fg_color="red")
+                self.view.error_label.configure(text=f"A(z) {key} helytelen, használj számokat! (lehet + kezdeni!)", text_color="red",fg_color="transparent")
                 return
 
         entered_name = self.view.username.get()
@@ -49,13 +50,17 @@ class RegisterController:
                 session.commit()
                 session.refresh(self.user)
                 self.view.clear_form()
-                self.main_app.login.registration_label.configure(text="Successfully registered", fg_color="green")
+                self.main_app.login.registration_label.configure(text="Sikeres regisztráció!", fg_color="green")
                 self.main_app.show_login()
             except Exception as e:
                 session.rollback()
                 error = str(e).lower()
-                entered_data = {"name":self.user.name, "email":self.user.email, "phone":self.user.phone}
-                for key, data in entered_data.items():
-                    if key in error:
-                        self.view.error_label.configure(text=f"The {key} is already registered", fg_color="red")
-                        break
+                if "users_name_key" in error or "users.name" in error:
+                    self.view.error_label.configure(text="Ez a felhasználónév már foglalt!", text_color="red")
+                elif "users_email_key" in error or "users.email" in error:
+                    self.view.error_label.configure(text="Ez az e-mail cím már regisztrálva van!", text_color="red")
+                elif "users_phone_key" in error or "users.phone" in error:
+                    self.view.error_label.configure(text="Ez a telefonszám már regisztrálva van!", text_color="red")
+                else:
+                    self.view.error_label.configure(text="Váratlan hiba történt a mentés során!", text_color="red")
+                    print("Adatbázis hiba:", error)
