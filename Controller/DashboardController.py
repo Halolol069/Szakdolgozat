@@ -1,7 +1,9 @@
 import datetime
+import math
 import os.path
 from tkinter import ttk, filedialog, messagebox
 from fpdf import fpdf
+from sqlalchemy import func
 
 import View.PartsView as PartView
 from Controller import PartsController as PartsController, TransactionController
@@ -9,7 +11,7 @@ import customtkinter
 
 import View.CompatibilityView as CompatibilitiesView
 from Controller import CompatibilityController as CompatibilitiesController
-from Model.database import Parts, Sessionlocal, TransactionLog
+from Model.database import Parts, Sessionlocal, SellItem, SellHeader, ROLE_ADMIN
 from View.TransactionView import TransactionView
 
 
@@ -44,10 +46,11 @@ class DashboardController:
             self.main_app, transaction_view)
 
     def logout(self):
+        self.back()
         self.main_app.login.username.delete(0, "end")
         self.main_app.login.password.delete(0, "end")
-        self.main_app.login.error_label.configure(text="")
-        self.main_app.login.registration_label.configure(text="")
+        self.main_app.login.error_label.configure(text="", fg_color="transparent")
+        self.main_app.login.registration_label.configure(text="", fg_color="transparent")
         self.main_app.show_login()
 
     def show_parts(self):
@@ -66,6 +69,10 @@ class DashboardController:
         self.view.back_button.grid_remove()
 
     def show_compatibility(self):
+        user = self.main_app.current_user
+        if user is None or user.role_id != ROLE_ADMIN:
+            messagebox.showerror("Hiba", "Ehhez nincs jogosultságod!")
+            return
         self.clear_main_frame()
         compatibility_view = CompatibilitiesView.CompatibilityView(self.view.main_frame)
         compatibility_view.pack(fill="both", expand=True)
@@ -79,11 +86,27 @@ class DashboardController:
     def low_stock(self):
         with Sessionlocal() as session:
             try:
-                low_part_list = session.query(Parts).filter(Parts.amount < Parts.min_amount).all()
-                if len(low_part_list) > 0:
-                    return low_part_list
+                since = datetime.datetime.now() - datetime.timedelta(days=90)
+                sold = dict(
+                    session.query(SellItem.part_id, func.sum(SellItem.amount))
+                    .join(SellHeader)
+                    .filter(SellHeader.date >= since)
+                    .group_by(SellItem.part_id)
+                    .all()
+                )
+                result = []
+                for part in session.query(Parts).all():
+                    per_day = (sold.get(part.id) or 0) / 90
+                    min_level = max(part.min_amount, math.ceil(per_day * 7))
+                    if part.amount < min_level:
+                        target = max(part.max_amount, math.ceil(per_day * 13))
+                        result.append((part.part_number, part.name, part.amount,
+                                       max(target - part.amount, 0)))
+                return result
+
             except Exception as e:
-                print("Sikertelen az adat lekérés", e)
+                session.rollback()
+                print("Sikertelen adatlekérés!", e)
 
     def option_continue(self, popup):
         popup.destroy()
@@ -150,6 +173,7 @@ class DashboardController:
                 pdf.cell(30, row_height, f"{part.price} Ft", border=1, new_x="LMARGIN", new_y="NEXT", align='R')
 
             pdf.output(filepath)
+            messagebox.showinfo("Siker","A raktárkészlet PDF sikeresen elmentve!")
 
         except Exception as e:
             print(f"Hiba a PDF generálásakor: {e}")
@@ -169,6 +193,12 @@ class DashboardController:
         table_frame.grid_rowconfigure(0, weight=1)
 
         columns = ["part_number", "name", "amount", "for_order"]
+        style = ttk.Style()
+        style.theme_use("default")
+        style.configure("Treeview", background="#2b2b2b", foreground="white", fieldbackground="#2b2b2b", borderwidth=0)
+        style.map('Treeview', background=[('selected', '#1f538d')])
+        style.configure("Treeview.Heading", background="#565b5e", foreground="white", relief="flat")
+        style.map("Treeview.Heading", background=[('active', '#343638')])
         parts_tree = ttk.Treeview(table_frame, columns=columns, show="headings", style="Treeview")
         parts_tree.heading("part_number", text="Cikkszám")
         parts_tree.heading("name", text="Megnevezés")
@@ -190,8 +220,5 @@ class DashboardController:
 
         popup_cancel_button = customtkinter.CTkButton(popup, text="Kilépés", command=popup.destroy)
         popup_cancel_button.pack(pady=10)
-        for parts in low_part:
-            suggested_order = parts.max_amount - parts.amount
-            if suggested_order < 0:
-                suggested_order = 0
-            parts_tree.insert("", "end", values=(parts.part_number, parts.name, parts.amount, suggested_order), tags="part")
+        for part_number, name, amount, order in low_part:
+            parts_tree.insert("", "end", values=(part_number, name, amount, order))
