@@ -2,7 +2,7 @@ import math
 import os
 import shutil
 from datetime import date, timedelta
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 
 import customtkinter
 from PIL import Image
@@ -321,7 +321,7 @@ class PartsController:
                 min_sold =math.ceil(sold_per_day * 7)
                 max_sold = math.ceil(min_sold*13)
                 parts_to_update = session.query(Parts).filter(Parts.id == part_id).first()
-                if parts_to_update:
+                if parts_to_update and total_sold > 0:
                     parts_to_update.min_amount = min_sold
                     parts_to_update.max_amount = max_sold
                     session.commit()
@@ -330,5 +330,5 @@ class PartsController:
                     return False
             except Exception as e:
                 session.rollback()
-                print("Hiba történt a frissítés során: ", e)
+                messagebox.showerror("Hiba történt a frissítés során: ", e)
                 return False
