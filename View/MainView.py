@@ -10,7 +10,3 @@ class MainView(customtkinter.CTk):
             self.current_frame.pack_forget()
         self.current_frame = view
         self.current_frame.pack(fill="both", expand=True)
-
-
-
-
