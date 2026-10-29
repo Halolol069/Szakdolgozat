@@ -13,7 +13,7 @@ def register(app):
         hover_color = "red",
         command=open_currency_window
     )
-    plugin_button.grid(row=5, column=0,padx=20, pady=10)
+    plugin_button.grid(row=6, column=0,padx=20, pady=10)
 
 def calculate_huf(euro:float):
     return euro *395

@@ -14,7 +14,7 @@ def register(app):
         hover_color="red",
         command=open_margin_window
     )
-    plugin_button.grid(row=6, column=0, padx=20, pady=10)
+    plugin_button.grid(row=7, column=0, padx=20, pady=10)
 
 def calculate_margin(net_price:float, margin_percent:float):
     profit = net_price * (margin_percent / 100)
