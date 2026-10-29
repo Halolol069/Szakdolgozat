@@ -23,8 +23,9 @@ class User(Base):
     password:Mapped[str] = mapped_column(String(100))
     email:Mapped[str] = mapped_column(unique=True)
     phone:Mapped[str] = mapped_column(unique=True)
-    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
-    role: Mapped["Role"] = relationship(back_populates="users")
+    role_id:Mapped[int] = mapped_column(ForeignKey("roles.id"))
+    is_active:Mapped[bool] = mapped_column(default=True)
+    role:Mapped["Role"] = relationship(back_populates="users")
     transaction_logs:Mapped[List["TransactionLog"]] = relationship(back_populates="users")
 
 class Role(Base):
