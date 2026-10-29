@@ -11,9 +11,13 @@ import customtkinter
 
 import View.CompatibilityView as CompatibilitiesView
 from Controller import CompatibilityController as CompatibilitiesController
+from Controller.AdminController import AdminController
 from Model.database import Parts, Sessionlocal, SellItem, SellHeader, ROLE_ADMIN
+from View.AdminView import AdminView
 from View.TransactionView import TransactionView
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class DashboardController:
 
@@ -33,10 +37,12 @@ class DashboardController:
 
         self.view.export_pdf_button.configure(command=self.export_inventory_pdf)
 
+        self.view.admin_button.configure(command=self.open_admin_panel)
+
     def clear_main_frame(self):
         for widget in self.view.main_frame.winfo_children():
             widget.destroy()
-        self.view.back_button.grid(row=9, column=0, padx=20, pady=20, sticky="s")
+        self.view.back_button.grid(row=15, column=0, padx=20, pady=20, sticky="s")
 
     def show_transaction(self):
         self.clear_main_frame()
@@ -61,12 +67,40 @@ class DashboardController:
         parts_controller = PartsController.PartsController(self.main_app, parts_view)
 
     def back(self):
-        for widget in self.view.main_frame.winfo_children():
-            widget.destroy()
-        self.view.welcome_label = customtkinter.CTkLabel(self.view.main_frame, text="Üdvözöllek a Rendszerben!",
-                                                    font=customtkinter.CTkFont(size=24, weight="bold"))
-        self.view.welcome_label.pack(pady=50)
+        self.clear_main_frame()
         self.view.back_button.grid_remove()
+        self.view.welcome_label = customtkinter.CTkLabel(self.view.main_frame, text="Vezetői Műszerfal",font=customtkinter.CTkFont(size=24, weight="bold"))
+        self.view.welcome_label.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="w")
+
+        self.view.stats_frame = customtkinter.CTkFrame(self.view.main_frame, fg_color="transparent")
+        self.view.stats_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+        self.view.stats_frame.grid_columnconfigure((0, 1, 2), weight=1)
+
+        self.view.card1 = customtkinter.CTkFrame(self.view.stats_frame, corner_radius=10, fg_color="#1f538d")
+        self.view.card1.grid(row=0, column=0, padx=10, sticky="ew")
+        self.view.card1_title = customtkinter.CTkLabel(self.view.card1, text="Nyilvántartott Alkatrészek", text_color="white", font=customtkinter.CTkFont(size=14))
+        self.view.card1_title.pack(pady=(15, 0))
+        self.view.card1_value = customtkinter.CTkLabel(self.view.card1, text="- db", text_color="white", font=customtkinter.CTkFont(size=26, weight="bold"))
+        self.view.card1_value.pack(pady=(0, 15))
+
+        self.view.card2 = customtkinter.CTkFrame(self.view.stats_frame, corner_radius=10, fg_color="#166534")
+        self.view.card2.grid(row=0, column=1, padx=10, sticky="ew")
+        self.view.card2_title = customtkinter.CTkLabel(self.view.card2, text="Raktárkészlet Értéke", text_color="white", font=customtkinter.CTkFont(size=14))
+        self.view.card2_title.pack(pady=(15, 0))
+        self.view.card2_value = customtkinter.CTkLabel(self.view.card2, text="- Ft", text_color="white", font=customtkinter.CTkFont(size=26, weight="bold"))
+        self.view.card2_value.pack(pady=(0, 15))
+
+        self.view.card3 = customtkinter.CTkFrame(self.view.stats_frame, corner_radius=10, fg_color="#991b1b")
+        self.view.card3.grid(row=0, column=2, padx=10, sticky="ew")
+        self.view.card3_title = customtkinter.CTkLabel(self.view.card3, text="Kritikus Készletszinten", text_color="white", font=customtkinter.CTkFont(size=14))
+        self.view.card3_title.pack(pady=(15, 0))
+        self.view.card3_value = customtkinter.CTkLabel(self.view.card3, text="- db", text_color="white", font=customtkinter.CTkFont(size=26, weight="bold"))
+        self.view.card3_value.pack(pady=(0, 15))
+
+        self.view.chart_frame = customtkinter.CTkFrame(self.view.main_frame, corner_radius=10, fg_color="gray20")
+        self.view.chart_frame.grid(row=2, column=0, padx=20, pady=20, sticky="nsew")
+
+        self.load_dashboard_stats()
 
     def show_compatibility(self):
         user = self.main_app.current_user
@@ -82,6 +116,7 @@ class DashboardController:
         missing_parts = self.low_stock()
         if missing_parts:
             self.show_low_stock_popup(missing_parts)
+        self.load_dashboard_stats()
 
     def low_stock(self):
         with Sessionlocal() as session:
@@ -107,6 +142,72 @@ class DashboardController:
             except Exception as e:
                 session.rollback()
                 print("Sikertelen adatlekérés!", e)
+
+    def load_dashboard_stats(self):
+        if not hasattr(self.view, "card1_value"):
+            return
+
+        with Sessionlocal() as session:
+            try:
+                all_parts = session.query(Parts).all()
+
+                total_parts_count = sum(p.amount for p in all_parts)
+                total_value = sum(p.amount * p.price for p in all_parts)
+                critical_count = sum(1 for p in all_parts if p.amount < p.min_amount)
+
+                self.view.card1_value.configure(text=f"{total_parts_count} db")
+                self.view.card2_value.configure(text=f"{total_value:,.0f} Ft".replace(",", " "))
+                self.view.card3_value.configure(text=f"{critical_count} db")
+
+                category_data = {}
+                for part in all_parts:
+                    if part.amount > 0:
+                        cat = part.type if part.type else "Egyéb"
+                        category_data[cat] = category_data.get(cat, 0) + part.amount
+
+                for widget in self.view.chart_frame.winfo_children():
+                    widget.destroy()
+
+                if category_data:
+                    self.draw_chart(category_data)
+                else:
+                    empty_label = customtkinter.CTkLabel(self.view.chart_frame, text="Nincs elég adat a grafikonhoz",
+                                                         text_color="gray")
+                    empty_label.pack(expand=True)
+
+            except Exception as e:
+                print(f"Hiba a statisztikák betöltésekor: {e}")
+
+    def draw_chart(self, category_data):
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(8, 4), dpi=100)
+
+        fig.patch.set_facecolor('#333333')
+        ax.set_facecolor('#333333')
+
+        labels = list(category_data.keys())
+        sizes = list(category_data.values())
+
+        wedges, texts, autotexts = ax.pie(
+            sizes,
+            labels=labels,
+            autopct='%1.1f%%',
+            startangle=90,
+            textprops=dict(color="w", fontsize=10),
+            colors=plt.cm.Set3.colors
+        )
+
+        centre_circle = plt.Circle((0, 0), 0.70, fc='#333333')
+        fig.gca().add_artist(centre_circle)
+
+        ax.axis('equal')
+        plt.title('Raktárkészlet eloszlása kategóriánként', color='white', pad=20, fontsize=14, fontweight='bold')
+
+        canvas = FigureCanvasTkAgg(fig, master=self.view.chart_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=20, pady=20)
+
+        plt.close(fig)
 
     def option_continue(self, popup):
         popup.destroy()
@@ -222,3 +323,13 @@ class DashboardController:
         popup_cancel_button.pack(pady=10)
         for part_number, name, amount, order in low_part:
             parts_tree.insert("", "end", values=(part_number, name, amount, order))
+
+    def open_admin_panel(self):
+        user = self.main_app.current_user
+        if user is None or user.role_id != ROLE_ADMIN:
+            messagebox.showerror("Hiba", "Ehhez nincs jogosultságod!")
+            return
+        self.clear_main_frame()
+        admin_view = AdminView(self.view.main_frame)
+        admin_view.pack(fill="both", expand=True)
+        self.admin_controller = AdminController(self.main_app, admin_view)

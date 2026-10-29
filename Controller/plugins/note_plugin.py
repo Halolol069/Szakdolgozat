@@ -16,7 +16,7 @@ def register(app):
         hover_color="red",
         command=open_notes
     )
-    plugin_button.grid(row=8, column=0, padx=20, pady=10)
+    plugin_button.grid(row=9, column=0, padx=20, pady=10)
 
 def read_notes_file(filepath="note.txt"):
     if os.path.isfile(filepath):

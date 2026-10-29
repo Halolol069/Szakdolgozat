@@ -5,7 +5,8 @@ import customtkinter
 from fpdf import FPDF
 from sqlalchemy import func
 
-from Model.database import Sessionlocal, Parts, TransactionLog, SellHeader, SellItem, User
+from Model.database import Sessionlocal, Parts, TransactionLog, SellHeader, SellItem, User, VehicleBrand, Modell, \
+    Compatibility, Engine
 
 
 class TransactionController:
@@ -17,6 +18,93 @@ class TransactionController:
         self.view.to_cart_save_button.configure(command=self.add_to_cart)
         self.view.search_bar.bind("<KeyRelease>", self.load_all_parts)
         self.view.cart_review_button.configure(command=self.show_cart)
+
+        if hasattr(self.view, "brand_dropdown"):
+            self.load_brands()
+            self.view.reset_filter_button.configure(command=self.reset_filters)
+        self.load_transaction_history()
+    def load_brands(self):
+        with Sessionlocal() as session:
+            try:
+                brands = session.query(VehicleBrand).order_by(VehicleBrand.name).all()
+                brand_list = [b.name for b in brands]
+                self.view.brand_dropdown.configure(values=brand_list, command=self.load_model)
+                self.view.brand_dropdown.set("Márka")
+            except Exception as e:
+                print("Hiba a márkák betöltésekor!", e)
+
+    def load_model(self, selected_brand):
+        self.view.model_dropdown.configure(values=["Modell"])
+        self.view.model_dropdown.set("Modell")
+        self.view.engine_dropdown.configure(values=["Motor"])
+        self.view.engine_dropdown.set("Motor")
+
+        with Sessionlocal() as session:
+            try:
+                models = (
+                    session.query(Modell)
+                    .join(VehicleBrand)
+                    .filter(VehicleBrand.name == selected_brand)
+                    .all()
+                )
+                model_list = [m.name for m in models]
+                self.view.model_dropdown.configure(values=model_list, command=self.load_engines)
+            except Exception as e:
+                print("Hiba a modellek betöltésekor!", e)
+
+    def load_engines(self, selected_model):
+        self.view.engine_dropdown.configure(values=["Motor"])
+        self.view.engine_dropdown.set("Motor")
+
+        with Sessionlocal() as session:
+            try:
+                model = session.query(Modell).filter_by(name=selected_model).first()
+                engine_list = []
+                if model:
+                    for mc in model.motor_comps:
+                        engine_list.append(mc.engine.engine_code)
+                        
+                self.view.engine_dropdown.configure(values=engine_list, command=self.filter_parts_by_vehicle)
+            except Exception as e:
+                print("Hiba a motorok betöltésekor!", e)
+
+    def filter_parts_by_vehicle(self, selected_engine):
+        for item in self.view.transaction_tree.get_children():
+            self.view.transaction_tree.delete(item)
+
+        selected_model = self.view.model_dropdown.get()
+
+        with Sessionlocal() as session:
+            try:
+                compact_parts = (
+                    session.query(Parts)
+                    .join(Compatibility, Parts.id == Compatibility.part_id)
+                    .join(Modell, Compatibility.modell_id == Modell.id)
+                    .join(Engine, Compatibility.engine_id == Engine.id)
+                    .filter(Modell.name == selected_model, Engine.engine_code == selected_engine)
+                    .all()
+                )
+                if not compact_parts:
+                    messagebox.showinfo(
+                        "Nincs találat",
+                        "Ehhez a járműhöz jelenleg nincs rögzített kompatibilis alkatrész!"
+                    )
+                    return
+
+                for part in compact_parts:
+                    self.view.transaction_tree.insert("","end", values=(part.id, part.name, part.amount, part.type,part.price))
+            except Exception as e:
+                print("Hiba a kompatiblis alkatrészek szűrésekor: ",e)
+
+    def reset_filters(self):
+        if hasattr(self.view, 'brand_dropdown'):
+            self.view.brand_dropdown.set("Márka")
+            self.view.model_dropdown.configure(values=["Modell"])
+            self.view.model_dropdown.set("Modell")
+            self.view.engine_dropdown.configure(values=["Motor"])
+            self.view.engine_dropdown.set("Motor")
+        self.view.search_bar.delete(0, "end")
+        self.load_all_parts()
 
     def load_all_parts(self, event=None):
         for item in self.view.transaction_tree.get_children():
@@ -31,7 +119,7 @@ class TransactionController:
                     all_parts = session.query(Parts).all()
 
                 for part in all_parts:
-                        self.view.transaction_tree.insert("", "end", values=(part.id, part.name, part.amount))
+                        self.view.transaction_tree.insert("", "end", values=(part.id, part.name, part.amount, part.type, part.price))
             except Exception as e:
                 print("Hiba történt az adatbázis mentésekor!",e)
 
@@ -76,7 +164,7 @@ class TransactionController:
 
         raw_quantity = self.view.transaction_quantity_menu.get()
 
-        if not raw_quantity:
+        if not self.valid_quantity(raw_quantity):
             messagebox.showerror("Hiba", "Kérlek érvényes számot adj meg!")
             return
 
@@ -130,6 +218,11 @@ class TransactionController:
         if not self.cart:
             return False
 
+        user = self.main_app.current_user
+        if user is None:
+            messagebox.showerror("Hiba", "Nincs bejelentkezett felhasználó!")
+            return False
+
         cart_type = self.cart[0]["type"]
         buyer_name = "-"
 
@@ -148,46 +241,58 @@ class TransactionController:
             return False
 
         with Sessionlocal() as session:
-            user_id = self.main_app.current_user.id if self.main_app.current_user else 1
+            try:
+                new_header = None
+                if cart_type == "Kiadás":
+                    max_num = session.query(func.max(SellHeader.number)).scalar() or 10000
+                    new_header = SellHeader(date=datetime.datetime.now(), number=max_num + 1)
+                    session.add(new_header)
+                    session.flush()
 
-            max_num = session.query(func.max(SellHeader.number)).scalar() or 10000
-            new_header = SellHeader(date=datetime.datetime.now(), number=max_num + 1)
-            session.add(new_header)
-            session.flush()
+                for item in self.cart:
+                    current_part = session.query(Parts).filter(Parts.id == item["part_id"]).with_for_update().first()
 
-            for item in self.cart:
-                current_part = session.query(Parts).filter(Parts.id == item["part_id"]).first()
+                    if cart_type == "Bevételezés":
+                        current_part.amount += item["quantity"]
+                        log_qty = item["quantity"]
+                        log_type = "Bevételezés"
+                    else:
+                        if current_part.amount < item["quantity"]:
+                            session.rollback()
+                            messagebox.showerror("Hiba", f"Nincs elegendő készlet ebből: {current_part.name}!")
+                            return False
 
-                if cart_type == "Bevételezés":
-                    current_part.amount += item["quantity"]
-                    log_qty = item["quantity"]
-                    log_type = "Bevételezés"
-                else:
-                    current_part.amount -= item["quantity"]
-                    log_qty = -item["quantity"]
-                    log_type = "Eladás"
+                        current_part.amount -= item["quantity"]
+                        log_qty = -item["quantity"]
+                        log_type = "Eladás"
 
-                new_item = SellItem(
-                    sell_header_id=new_header.id,
-                    part_id=current_part.id,
-                    amount=item["quantity"],
-                    price=current_part.price
-                )
-                session.add(new_item)
+                        new_item = SellItem(
+                            sell_header_id=new_header.id,
+                            part_id=current_part.id,
+                            amount=item["quantity"],
+                            price=current_part.price
+                        )
+                        session.add(new_item)
 
-                new_transaction = TransactionLog(
-                    transaction_type=log_type,
-                    user_id=user_id,
-                    quantity=log_qty,
-                    part_id=item["part_id"],
-                    date=datetime.datetime.now()
-                )
-                session.add(new_transaction)
-            session.commit()
+                    new_transaction = TransactionLog(
+                        transaction_type=log_type,
+                        user_id=user.id,
+                        quantity=log_qty,
+                        part_id=item["part_id"],
+                        date=datetime.datetime.now()
+                    )
+                    session.add(new_transaction)
+
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                print("Adatbázis hiba a tranzakció során:", e)
+                messagebox.showerror("Hiba", "Váratlan hiba történt a mentéskor!")
+                return False
 
         self.generate_batch_receipt(filepath, buyer_name, cart_type)
 
-        messagebox.showinfo("Siker", f"A tranzakció sikeresen rögzítve, PDF legenerálva!")
+        messagebox.showinfo("Siker", "A tranzakció sikeresen rögzítve, PDF legenerálva!")
         self.cart.clear()
         self.load_all_parts()
         self.load_transaction_history()
