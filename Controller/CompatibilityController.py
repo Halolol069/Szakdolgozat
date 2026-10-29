@@ -66,7 +66,7 @@ class CompatibilityController:
                         man_name = "None"
                     else:
                         man_name = parts.manufacturer.name
-                    self.view.parts_tree.insert(parent="",index="end",values=(parts.name, man_name, "", ""))
+                    self.view.parts_tree.insert(parent="",index="end",values=(parts.name, man_name, parts.type, parts.price))
             except Exception as e:
                 print("Az alkatrészek betöltése sikertelen!", e)
 
@@ -88,7 +88,6 @@ class CompatibilityController:
                 if not existing:
                     new_compatibility = Compatibility(part=part,engine=engine,modell=model)
                     session.add(new_compatibility)
-                session.add(new_compatibility)
                 self.view.parts_tree.selection_remove(part_id)
             session.commit()
             if not self.selected_parts:

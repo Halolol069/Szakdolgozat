@@ -22,6 +22,11 @@ class PartsController:
         self.view.delete_button.configure(command=self.delete_selected_part)
         self.view.edit_button.configure(command=self.open_edit_popup)
 
+        if hasattr(self.view, "search_entry"):
+            self.view.search_entry.bind("<KeyRelease>", self.load_parts)
+        if hasattr(self.view, "tree") and hasattr(self.view.tree, "bind"):
+            self.view.tree.bind("<<TreeviewSelect>>", self.on_part_select)
+
         self.view.tree.tag_configure("low_stock",background="red", foreground="white")
         self.view.tree.tag_configure("high_stock", background="green", foreground="white")
 
@@ -34,17 +39,73 @@ class PartsController:
         current_user = self.main_app.current_user
 
         if current_user and current_user.role_id == 2:
-            self.view.add_button.grid_remove()
-            self.view.delete_button.grid_remove()
-            self.view.edit_button.grid_remove()
+            for btn in (self.view.add_button, self.view.delete_button, self.view.edit_button):
+                if hasattr(btn, "pack_forget"):
+                    btn.pack_forget()
+                if hasattr(btn, "grid_remove"):
+                    btn.grid_remove()
 
-    def load_parts(self):
+    def on_part_select(self, event=None):
+        if not hasattr(self.view, "preview_image_label"):
+            return
+
+        selected = self.view.tree.selection()
+        if not selected:
+            self.view.preview_image_label.configure(image="", text="Válassz ki egy\nalkatrészt a listából")
+            self.view.preview_image_label.image = None
+            self.view.preview_name_label.configure(text="")
+            self.view.preview_info_label.configure(text="")
+            return
+
+        part_id = self.view.tree.item(selected[0])["values"][0]
+        with Sessionlocal() as session:
+            part = session.query(Parts).filter(Parts.id == part_id).first()
+            if not part:
+                return
+
+            if part.manufacturer:
+                man_name = part.manufacturer.name
+            else:
+                man_name = "Ismeretlen"
+            self.view.preview_name_label.configure(text=part.name)
+            self.view.preview_info_label.configure(
+                text=f"Cikkszám: {part.part_number}\n"
+                     f"Gyártó: {man_name}\n"
+                     f"Min. szint: {part.min_amount} db\n"
+                     f"Max. szint: {part.max_amount} db"
+            )
+
+            if part.image_path and os.path.exists(part.image_path):
+                try:
+                    pil_img = Image.open(part.image_path)
+                    ctk_img = customtkinter.CTkImage(light_image=pil_img, dark_image=pil_img, size=(180, 180))
+                    self.view.preview_image_label.configure(image="")
+                    self.view.preview_image_label.configure(image=ctk_img, text="")
+                    self.view.preview_image_label.image = ctk_img
+                except Exception:
+                    self.view.preview_image_label.configure(image="", text="Kép nem betölthető")
+                    self.view.preview_image_label.image = None
+            else:
+                self.view.preview_image_label.configure(image="", text="Nincs feltöltött kép")
+                self.view.preview_image_label.image = None
+
+    def load_parts(self, *args):
         for parts in self.view.tree.get_children():
             self.view.tree.delete(parts)
 
+        search_term = ""
+        if hasattr(self.view, "search_entry"):
+            search_term = self.view.search_entry.get().strip()
+
         with Sessionlocal() as session:
             try:
-                parts_list = session.query(Parts).all()
+                query = session.query(Parts)
+                if search_term:
+                    query = query.filter(
+                        (Parts.name.ilike(f"%{search_term}%")) |
+                        (Parts.part_number.ilike(f"%{search_term}%"))
+                    )
+                parts_list = query.order_by(Parts.id).all()
                 for part in parts_list:
                     self.part_indicator(part.id)
                     session.refresh(part)

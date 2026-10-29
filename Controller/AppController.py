@@ -39,8 +39,12 @@ class Controller:
         self.app.show_frame(self.dashboard)
         if self.current_user.role_id == ROLE_ADMIN:
             self.dashboard.compatibility_button.grid(row=3, column=0, padx=20, pady=10)
+            if hasattr(self.dashboard, "admin_button"):
+                self.dashboard.admin_button.grid(row=4, column=0, padx=20, pady=10)
         else:
             self.dashboard.compatibility_button.grid_forget()
+            if hasattr(self.dashboard, "admin_button"):
+                self.dashboard.admin_button.grid_forget()
 
     def load_plugins(self):
         plugin_folder = Path(__file__).parent / "plugins"

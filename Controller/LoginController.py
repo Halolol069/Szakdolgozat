@@ -31,6 +31,11 @@ class LoginController:
             self.show_error("Hibás felhasználónév vagy jelszó!")
             return
 
+        if not getattr(user, "is_active", True):
+            self.view.password.delete(0, "end")
+            self.show_error("Ez a felhasználói fiók fel van függesztve!")
+            return
+
         self.view.username.delete(0, "end")
         self.view.password.delete(0, "end")
         self.view.error_label.configure(text="", fg_color="transparent")
