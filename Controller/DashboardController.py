@@ -56,7 +56,7 @@ class DashboardController:
         self.main_app.login.username.delete(0, "end")
         self.main_app.login.password.delete(0, "end")
         self.main_app.login.error_label.configure(text="", fg_color="transparent")
-        self.main_app.login.registration_label.configure(text="", fg_color="transparent")
+        self.main_app.login.password.configure(show="*")
         self.main_app.show_login()
 
     def show_parts(self):

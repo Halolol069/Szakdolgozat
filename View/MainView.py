@@ -7,6 +7,7 @@ class MainView(customtkinter.CTk):
         self.geometry("1200x800")
         self.minsize(1000, 700)
         self.state("zoomed")
+        self.title("Készletkezelő Rendszer")
     def show_frame(self, view):
         if self.current_frame is not None:
             self.current_frame.pack_forget()

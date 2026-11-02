@@ -19,28 +19,36 @@ def calculate_huf(euro:float):
     return euro *395
 
 def open_currency_window():
-    window = customtkinter.CTkToplevel()
-    window.title("Valutaváltó plugin")
-    window.geometry("400x300")
+    if not hasattr(open_currency_window, "window") or not open_currency_window.window.winfo_exists():
+        window = customtkinter.CTkToplevel()
+        open_currency_window.window = window
+        window.title("Valutaváltó plugin")
+        window.geometry("400x300")
 
-    window.attributes("-topmost", True)
+        window.attributes("-topmost", True)
 
-    title_label = customtkinter.CTkLabel(window, text="Euró (EUR) -> Forint (HUF)", font=("Arial",16,"bold"))
-    title_label.pack(pady=10)
+        title_label = customtkinter.CTkLabel(window, text="Euró (EUR) -> Forint (HUF)", font=("Arial",16,"bold"))
+        title_label.pack(pady=10)
 
-    entry = customtkinter.CTkEntry(window, placeholder_text="Összeg euróban...")
-    entry.pack(pady=10)
+        info_label = customtkinter.CTkLabel(window, text="(Aktuális rögzített árfolyam: 1 EUR = 395 HUF)",font=("Arial", 11, "italic"))
+        info_label.pack(pady=(0, 10))
 
-    result_label = customtkinter.CTkLabel(window, text="Eredmény: -Ft", font=("Arial",14,"bold"))
-    result_label.pack(pady=10)
+        entry = customtkinter.CTkEntry(window, placeholder_text="Összeg euróban...")
+        entry.pack(pady=10)
 
-    def calculate():
-        try:
-            eur = float(entry.get())
-            huf = calculate_huf(eur)
-            result_label.configure(text=f"Eredmény: {huf:,.0f}Ft")
-        except ValueError:
-            result_label.configure(text="Kérlek számot adj meg!",text_color="red")
+        result_label = customtkinter.CTkLabel(window, text="Eredmény: -Ft", font=("Arial",14,"bold"))
+        result_label.pack(pady=10)
 
-    calc_button = customtkinter.CTkButton(window, text="Számítás", command=calculate)
-    calc_button.pack(pady=10)
+        def calculate():
+            try:
+                eur = float(entry.get())
+                huf = calculate_huf(eur)
+                result_label.configure(text=f"Eredmény: {huf:,.0f}Ft")
+            except ValueError:
+                result_label.configure(text="Kérlek számot adj meg!",text_color="red")
+
+        calc_button = customtkinter.CTkButton(window, text="Számítás", command=calculate)
+        calc_button.pack(pady=10)
+    else:
+        open_currency_window.window.focus()
+        open_currency_window.window.lift()

@@ -20,6 +20,7 @@ class DummyView:
         self.back_button = DummyButton()
         self.transaction_button = DummyButton()
         self.export_pdf_button = DummyButton()
+        self.admin_button = DummyButton()
 
 class TestDashboardLogic(Test_base):
     def test_low_stock(self):
@@ -37,4 +38,4 @@ class TestDashboardLogic(Test_base):
             eredmeny = controller.low_stock()
 
             self.assertEqual(1, len(eredmeny), "The result is correct!")
-            self.assertEqual(1, eredmeny[0].amount, "The result is correct!")
+            self.assertEqual(1, eredmeny[0][2], "The result is correct!")

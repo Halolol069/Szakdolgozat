@@ -50,6 +50,11 @@ class AdminController:
                 )
 
     def create_user(self):
+
+        if not self.main_app.current_user or getattr(self.main_app.current_user, "role_id", None) != ROLE_ADMIN:
+            messagebox.showerror("Hiba", "Nincs jogosultságod új felhasználót létrehozni!")
+            return
+
         name = self.view.new_user_name.get().strip()
         email = self.view.new_user_email.get().strip()
         phone = self.view.new_user_phone.get().strip()
@@ -58,6 +63,18 @@ class AdminController:
 
         if not all([name, email, phone, raw_pw]):
             messagebox.showerror("Hiba", "Minden mező kitöltése kötelező!")
+            return
+
+        if "@" not in email or "." not in email:
+            messagebox.showerror("Hiba", "Az e-mail cím formátuma nem megfelelő (@ és . kötelező)!")
+            return
+
+        if len(raw_pw) < 6:
+            messagebox.showerror("Hiba", "A jelszó túl rövid, minimum 6 karakter kötelező!")
+            return
+
+        if not phone.lstrip("+").isdigit():
+            messagebox.showerror("Hiba", "A telefonszám helytelen, csak számokat használj (a + megengedett)!")
             return
 
         if role_str == "Admin":
@@ -80,9 +97,17 @@ class AdminController:
                 self.view.new_user_phone.delete(0, "end")
                 self.view.new_user_pw.delete(0, "end")
                 self.load_users()
-            except IntegrityError:
+            except IntegrityError as e:
                 session.rollback()
-                messagebox.showerror("Hiba", "A megadott név, e-mail vagy telefonszám már foglalt!")
+                error = str(e).lower()
+                if "users_name_key" in error or "users.name" in error:
+                    messagebox.showerror("Hiba", "Ez a felhasználónév már foglalt!")
+                elif "users_email_key" in error or "users.email" in error:
+                    messagebox.showerror("Hiba", "Ez az e-mail cím már regisztrálva van!")
+                elif "users_phone_key" in error or "users.phone" in error:
+                    messagebox.showerror("Hiba", "Ez a telefonszám már regisztrálva van!")
+                else:
+                    messagebox.showerror("Hiba", "A megadott adat már foglalt vagy adatbázis hiba történt!")
 
     def toggle_user_status(self):
         selected = self.view.user_tree.selection()

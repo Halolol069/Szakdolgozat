@@ -2,7 +2,7 @@ import customtkinter
 import os
 
 def register(app):
-    print("Gyors jegyzet indítása!")
+    print("Közös üzenőfal indítása!")
 
     try:
         target_frame = app.dashboard.sidebar_frame
@@ -11,7 +11,7 @@ def register(app):
 
     plugin_button = customtkinter.CTkButton(
         master=target_frame,
-        text="Gyors jegyzet",
+        text="Közös üzenőfal",
         fg_color="green",
         hover_color="red",
         command=open_notes
@@ -29,29 +29,34 @@ def write_note_file(content: str, filepath="note.txt"):
         f.write(content)
 
 def open_notes():
-    window=customtkinter.CTkToplevel()
-    window.title("Gyors jegyzet")
-    window.geometry("500x500")
-    window.attributes("-topmost", True)
+    if not hasattr(open_notes, "window") or not open_notes.window.winfo_exists():
+        window=customtkinter.CTkToplevel()
+        open_notes.window = window
+        window.title("Közös üzenőfal")
+        window.geometry("500x500")
+        window.attributes("-topmost", True)
 
-    title_label= customtkinter.CTkLabel(window, text="Napi emlékeztetők!", font=("Arial", 16, "bold"))
-    title_label.pack(pady=15)
+        title_label= customtkinter.CTkLabel(window, text="Napi emlékeztetők!", font=("Arial", 16, "bold"))
+        title_label.pack(pady=15)
 
-    textbox = customtkinter.CTkTextbox(window, width=350, height=250)
-    textbox.pack(pady=10)
+        textbox = customtkinter.CTkTextbox(window, width=350, height=250)
+        textbox.pack(pady=10)
 
-    existing_notes = read_notes_file()
-    if existing_notes:
-        textbox.insert("1.0", existing_notes)
+        existing_notes = read_notes_file()
+        if existing_notes:
+            textbox.insert("1.0", existing_notes)
 
-    def save_note():
-        sentences = textbox.get("1.0", "end")
+        def save_note():
+            sentences = textbox.get("1.0", "end")
 
-        write_note_file(sentences)
+            write_note_file(sentences)
 
-        save_button.configure(text="Sikeres mentés!", fg_color="green")
+            save_button.configure(text="Sikeres mentés!", fg_color="green")
 
-        window.after(2000, lambda:save_button.configure(text="Mentés", fg_color="green"))
+            window.after(2000, lambda:save_button.configure(text="Mentés", fg_color="green"))
 
-    save_button = customtkinter.CTkButton(window, text="Mentés", command=save_note)
-    save_button.pack(pady=10)
+        save_button = customtkinter.CTkButton(window, text="Mentés", command=save_note)
+        save_button.pack(pady=10)
+    else:
+        open_notes.window.focus()
+        open_notes.window.lift()

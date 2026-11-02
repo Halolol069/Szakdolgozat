@@ -6,7 +6,7 @@ from fpdf import FPDF
 from sqlalchemy import func
 
 from Model.database import Sessionlocal, Parts, TransactionLog, SellHeader, SellItem, User, VehicleBrand, Modell, \
-    Compatibility, Engine
+    Compatibility, Engine, VehicleType, Vehicle
 
 
 class TransactionController:
@@ -19,14 +19,39 @@ class TransactionController:
         self.view.search_bar.bind("<KeyRelease>", self.load_all_parts)
         self.view.cart_review_button.configure(command=self.show_cart)
 
-        if hasattr(self.view, "brand_dropdown"):
-            self.load_brands()
+        if hasattr(self.view, "vehicletype_dropdown"):
+            self.load_vehicle_types()
             self.view.reset_filter_button.configure(command=self.reset_filters)
         self.load_transaction_history()
-    def load_brands(self):
+
+    def load_vehicle_types(self):
         with Sessionlocal() as session:
             try:
-                brands = session.query(VehicleBrand).order_by(VehicleBrand.name).all()
+                types = session.query(VehicleType).all()
+                type_list = [t.name for t in types]
+                self.view.vehicletype_dropdown.configure(values=type_list, command=self.load_brands)
+                self.view.vehicletype_dropdown.set("Jármű típus")
+            except Exception as e:
+                print("Hiba a járműtípusok betöltésekor!", e)
+
+    def load_brands(self, selected_type=None):
+        self.view.brand_dropdown.configure(values=["Márka"])
+        self.view.brand_dropdown.set("Márka")
+        self.view.model_dropdown.configure(values=["Modell"])
+        self.view.model_dropdown.set("Modell")
+        self.view.engine_dropdown.configure(values=["Motor"])
+        self.view.engine_dropdown.set("Motor")
+        if not selected_type or selected_type == "Jármű típus":
+            return
+        with Sessionlocal() as session:
+            try:
+                brands = (session.query(VehicleBrand)
+                          .join(Modell, Modell.vehicleBrand_id == VehicleBrand.id)
+                          .join(Vehicle,Vehicle.modell_id == Modell.id )
+                          .join(VehicleType, Vehicle.vehicle_type_id == VehicleType.id)
+                          .filter(VehicleType.name == selected_type).distinct()
+                          .order_by(VehicleBrand.name)
+                          .all())
                 brand_list = [b.name for b in brands]
                 self.view.brand_dropdown.configure(values=brand_list, command=self.load_model)
                 self.view.brand_dropdown.set("Márka")
@@ -92,11 +117,13 @@ class TransactionController:
                     return
 
                 for part in compact_parts:
-                    self.view.transaction_tree.insert("","end", values=(part.id, part.name, part.amount, part.type,part.price))
+                    self.view.transaction_tree.insert("","end", values=(part.id,part.part_number, part.name, part.amount, part.type,part.price))
             except Exception as e:
                 print("Hiba a kompatiblis alkatrészek szűrésekor: ",e)
 
     def reset_filters(self):
+        if hasattr(self.view, "vehicletype_dropdown"):
+            self.view.vehicletype_dropdown.set("Jármű típus")
         if hasattr(self.view, 'brand_dropdown'):
             self.view.brand_dropdown.set("Márka")
             self.view.model_dropdown.configure(values=["Modell"])
@@ -114,12 +141,12 @@ class TransactionController:
             try:
                 search_term = self.view.search_bar.get()
                 if search_term:
-                    all_parts=session.query(Parts).filter(Parts.name.ilike(f"%{search_term}%")).all()
+                    all_parts=session.query(Parts).filter(Parts.name.ilike(f"%{search_term}%") | (Parts.part_number.ilike(f"%{search_term}%"))).all()
                 else:
                     all_parts = session.query(Parts).all()
 
                 for part in all_parts:
-                        self.view.transaction_tree.insert("", "end", values=(part.id, part.name, part.amount, part.type, part.price))
+                        self.view.transaction_tree.insert("", "end", values=(part.id,part.part_number, part.name, part.amount, part.type, part.price))
             except Exception as e:
                 print("Hiba történt az adatbázis mentésekor!",e)
 
@@ -170,8 +197,9 @@ class TransactionController:
 
         line_datas = self.view.transaction_tree.item(chosed_line[0])["values"]
         part_id = line_datas[0]
-        part_name = line_datas[1]
-        current_stock = int(line_datas[2])
+        part_number = line_datas[1]
+        part_name = line_datas[2]
+        current_stock = int(line_datas[3])
 
         ptr_type = self.view.transaction_type_menu.get()
         if len(self.cart) > 0:
@@ -194,6 +222,7 @@ class TransactionController:
 
             cart_item = {
                 "part_id": part_id,
+                "part_number": part_number,
                 "name": part_name,
                 "type": ptr_type,
                 "quantity": ptr_quantity,
@@ -318,7 +347,8 @@ class TransactionController:
             pdf.ln(10)
 
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(90, 10, "Megnevezés", border=1, align="L")
+            pdf.cell(40,10, "Cikkszám", border=1, align="L")
+            pdf.cell(50, 10, "Megnevezés", border=1, align="L")
             pdf.cell(30, 10, "Mennyiség", border=1, align="C")
             pdf.cell(35, 10, "Egységár", border=1, align="R")
             pdf.cell(35, 10, "Összesen", border=1, align="R", new_x="LMARGIN", new_y="NEXT")
@@ -326,8 +356,10 @@ class TransactionController:
             pdf.set_font("Arial", "", 12)
             grand_total = 0
             for item in self.cart:
-                safe_name = item["name"][:40]
-                pdf.cell(90, 10, safe_name, border=1, align="L")
+                safe_name = item["name"][:25] if item.get("name") else "-"
+                safe_part_number = item["part_number"][:18] if item.get("part_number") else "-"
+                pdf.cell(40,10, safe_part_number, border=1, align="L")
+                pdf.cell(50, 10, safe_name, border=1, align="L")
                 pdf.cell(30, 10, f"{item['quantity']} db", border=1, align="C")
                 pdf.cell(35, 10, f"{item['price']} Ft", border=1, align="R")
                 pdf.cell(35, 10, f"{item['total']} Ft", border=1, align="R", new_x="LMARGIN", new_y="NEXT")

@@ -1,13 +1,15 @@
 import customtkinter
 
 class EditPartView(customtkinter.CTkToplevel):
-    def __init__(self, master):
+    def __init__(self, master,manufacturer_dict):
         super().__init__(master)
 
         self.title("Alkatrész Szerkesztése")
         self.geometry("460x680")
 
         self.attributes("-topmost", True)
+
+        self.manufacturer_dict = manufacturer_dict
 
         self.scrollable_frame = customtkinter.CTkScrollableFrame(self, corner_radius=10)
         self.scrollable_frame.pack(fill="both", expand=True, padx=15, pady=15)
@@ -36,8 +38,10 @@ class EditPartView(customtkinter.CTkToplevel):
         self.max_amount = customtkinter.CTkEntry(self.scrollable_frame, placeholder_text="Maximum mennyiség", height=36)
         self.max_amount.pack(pady=6, padx=20, fill="x")
 
-        self.manufacturer_id = customtkinter.CTkEntry(self.scrollable_frame, placeholder_text="Gyártó ID", height=36)
-        self.manufacturer_id.pack(pady=6, padx=20, fill="x")
+        self.manufacturer_names = list(self.manufacturer_dict.keys())
+        self.manufacturer_combobox = customtkinter.CTkComboBox(self.scrollable_frame, values=self.manufacturer_names,height=36, state="readonly")
+        self.manufacturer_combobox.pack(pady=6, padx=20, fill="x")
+        self.manufacturer_combobox.set("Válasz egy gyártót...")
 
         self.image_label = customtkinter.CTkLabel(self.scrollable_frame, text="Nincs kép", width=150, height=150, bg_color="gray", corner_radius=10)
         self.image_label.pack(pady=(15,10), padx=20)
