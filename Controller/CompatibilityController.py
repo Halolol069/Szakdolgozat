@@ -1,6 +1,8 @@
 from tkinter import messagebox
 
-from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine, Vehicle, VehicleType
+from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine, Vehicle, VehicleType, \
+    ROLE_ADMIN
+
 
 class CompatibilityController:
     def __init__(self, main_app, view):
@@ -54,7 +56,7 @@ class CompatibilityController:
 
             self.engine_list = []
             for elements in self.model.motor_comps:
-                self.engine_list.append(f"{elements.engine.engine_code}-{elements.engine.ccc}ccm, {elements.engine.horse_power}LE")
+                self.engine_list.append(f"{elements.engine.engine_code} | {elements.engine.ccc}ccm, {elements.engine.horse_power}LE")
             self.view.engine_dropdown.configure(values=self.engine_list)
 
     def load_all_parts(self):
@@ -73,10 +75,13 @@ class CompatibilityController:
                 messagebox.showerror("Az alkatrészek betöltése sikertelen!", e)
 
     def save_compatibility(self):
+        if self.main_app.current_user.role_id != ROLE_ADMIN:
+            messagebox.showerror("Hiba", "Nincs jogosultságod kompatibilitást rögzíteni!")
+            return
         with Sessionlocal() as session:
             self.selected_parts = self.view.parts_tree.selection()
             raw_engine = self.view.engine_dropdown.get()
-            engine_code_only = raw_engine.split("-")[0] if "-" in raw_engine else raw_engine
+            engine_code_only = raw_engine.split(" | ")[0] if " | " in raw_engine else raw_engine
             vehicle_data = {
                 "vehiclebrand": self.view.vehiclebrand_dropdown.get(),
                 "model": self.view.model_dropdown.get(),
@@ -101,13 +106,16 @@ class CompatibilityController:
             self.view.after(3000, lambda: self.view.save_button_label.configure(text=""))
 
     def delete_compatibility(self):
+        if self.main_app.current_user.role_id != ROLE_ADMIN:
+            messagebox.showerror("Hiba", "Nincs jogosultságod kompatibilitást rögzíteni!")
+            return
         self.selected_parts = self.view.parts_tree.selection()
         if not self.selected_parts:
             messagebox.showwarning("Figyelem", "Kérlek válassz ki alkatrészeket a táblázatból a törléshez!")
             return
 
         raw_engine = self.view.engine_dropdown.get()
-        engine_code_only = raw_engine.split("-")[0] if "-" in raw_engine else raw_engine
+        engine_code_only = raw_engine.split(" | ")[0] if " | " in raw_engine else raw_engine
 
         vehicle_data = {
             "model": self.view.model_dropdown.get(),

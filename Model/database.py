@@ -2,7 +2,7 @@ import datetime
 import os
 
 import bcrypt
-from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func, Column, text
+from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func, Column, text, UniqueConstraint
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
@@ -45,8 +45,8 @@ class VehicleBrand(Base):
     id:Mapped[int] = mapped_column(primary_key=True)
     name:Mapped[str] = mapped_column(unique=True)
     country:Mapped[str] = mapped_column(String(100))
-    models:Mapped[List["Modell"]] = relationship(back_populates="vehicleBrand", cascade="all,delete-orphan")
-    engines:Mapped[List["Engine"]] = relationship(back_populates="vehicleBrand", cascade="all,delete-orphan")
+    models:Mapped[List["Modell"]] = relationship(back_populates="vehicleBrand")
+    engines:Mapped[List["Engine"]] = relationship(back_populates="vehicleBrand")
 
 class SellHeader(Base):
     __tablename__ = "sell_headers"
@@ -76,7 +76,7 @@ class Fuel(Base):
     __tablename__="fuels"
     id:Mapped[int] = mapped_column(primary_key=True)
     name:Mapped[str] = mapped_column(String(50))
-    engines:Mapped[List["Engine"]] = relationship(back_populates="fuel", cascade="all, delete-orphan")
+    engines:Mapped[List["Engine"]] = relationship(back_populates="fuel")
 
 class Engine(Base):
     __tablename__ = "engines"
@@ -130,6 +130,7 @@ class SellItem(Base):
 
 class Compatibility(Base):
     __tablename__ = "compatibilities"
+    __table_args__ = (UniqueConstraint("part_id", "modell_id", "engine_id"),)
     id:Mapped[int] = mapped_column(primary_key=True)
     part_id:Mapped[int] = mapped_column(ForeignKey("parts.id"))
     part:Mapped["Parts"] = relationship(back_populates="compatibilities")
@@ -140,6 +141,7 @@ class Compatibility(Base):
 
 class MotorCompatibility(Base):
     __tablename__ = "motorcompatibilities"
+    __table_args__ = (UniqueConstraint("modell_id", "engine_id"),)
     id:Mapped[int] = mapped_column(primary_key=True)
     modell_id:Mapped[int] = mapped_column(ForeignKey("models.id"))
     modell:Mapped["Modell"] = relationship(back_populates="motor_comps")
@@ -219,18 +221,22 @@ def seed_examples():
         session.flush()
 
         session.add_all([
-            Modell(id=1, name="Mustang", vehicleBrand_id=1, generation=6, date=datetime.datetime(2015, 1, 1)),
+            Modell(id=1, name="Mustang (Mk6)", vehicleBrand_id=1, generation=6, date=datetime.datetime(2015, 1, 1)),
             Modell(id=2, name="Testarossa", vehicleBrand_id=2, generation=1, date=datetime.datetime(1984, 1, 1)),
-            Modell(id=3, name="Corsa", vehicleBrand_id=3, generation=5, date=datetime.datetime(2019, 1, 1)),
-            Modell(id=4, name="Clio", vehicleBrand_id=4, generation=5, date=datetime.datetime(2019, 1, 1)),
+            Modell(id=3, name="Corsa (C)", vehicleBrand_id=3, generation=3, date=datetime.datetime(2019, 1, 1)),
+            Modell(id=4, name="Clio (III)", vehicleBrand_id=4, generation=3, date=datetime.datetime(2019, 1, 1)),
             Modell(id=5, name="TS-125", vehicleBrand_id=5, generation=1, date=datetime.datetime(1973, 1, 1)),
-            Modell(id=6, name="Golf", vehicleBrand_id=6, generation=7, date=datetime.datetime(2012, 1, 1)),
-            Modell(id=7, name="Passat", vehicleBrand_id=6, generation=8, date=datetime.datetime(2014, 1, 1)),
-            Modell(id=8, name="Swift", vehicleBrand_id=7, generation=4, date=datetime.datetime(2017, 1, 1)),
-            Modell(id=9, name="Vitara", vehicleBrand_id=7, generation=4, date=datetime.datetime(2015, 1, 1)),
-            Modell(id=10, name="Corolla", vehicleBrand_id=8, generation=12, date=datetime.datetime(2018, 1, 1)),
-            Modell(id=11, name="3-as sorozat", vehicleBrand_id=9, generation=6, date=datetime.datetime(2011, 1, 1)),
+            Modell(id=6, name="Golf (Mk7)", vehicleBrand_id=6, generation=7, date=datetime.datetime(2012, 1, 1)),
+            Modell(id=7, name="Passat (B8)", vehicleBrand_id=6, generation=8, date=datetime.datetime(2014, 1, 1)),
+            Modell(id=8, name="Swift (Mk4)", vehicleBrand_id=7, generation=4, date=datetime.datetime(2017, 1, 1)),
+            Modell(id=9, name="Vitara (Mk4)", vehicleBrand_id=7, generation=4, date=datetime.datetime(2015, 1, 1)),
+            Modell(id=10, name="Corolla (E210)", vehicleBrand_id=8, generation=12, date=datetime.datetime(2018, 1, 1)),
+            Modell(id=11, name="3-as (F30)", vehicleBrand_id=9, generation=3, date=datetime.datetime(2011, 1, 1)),
             Modell(id=12, name="MT-07", vehicleBrand_id=10, generation=1, date=datetime.datetime(2014, 1, 1)),
+            Modell(id=13, name="Astra (B)", vehicleBrand_id=3, generation=2, date=datetime.datetime(2000, 1, 1)),
+            Modell(id=14, name="Megane (IV)", vehicleBrand_id=4, generation=4, date=datetime.datetime(2014, 1, 1)),
+            Modell(id=15, name="F40", vehicleBrand_id=2, generation=2, date=datetime.datetime(1990, 1, 1)),
+            Modell(id=16, name="Polo (MK5)", vehicleBrand_id=6, generation=5, date=datetime.datetime(2011, 1, 1)),
             Engine(id=1, engine_code="coyote v8", horse_power=500, ccc=5000, vehicleBrand_id=1, fuel_id=1),
             Engine(id=2, engine_code="italian v12", horse_power=390, ccc=4900, vehicleBrand_id=2, fuel_id=2),
             Engine(id=3, engine_code="TS125", horse_power=12, ccc=125, vehicleBrand_id=5, fuel_id=1),
@@ -242,6 +248,10 @@ def seed_examples():
             Engine(id=9, engine_code="1.8 HSD", horse_power=122, ccc=1798, vehicleBrand_id=8, fuel_id=4),
             Engine(id=10, engine_code="2.0d", horse_power=184, ccc=1995, vehicleBrand_id=9, fuel_id=3),
             Engine(id=11, engine_code="CP2", horse_power=75, ccc=689, vehicleBrand_id=10, fuel_id=1),
+            Engine(id=12, engine_code="2.0 TDI", horse_power=190, ccc=1968, vehicleBrand_id=6, fuel_id=3),
+            Engine(id=13, engine_code="1.4 Ecotec", horse_power=100, ccc=1398, vehicleBrand_id=3, fuel_id=1),
+            Engine(id=14, engine_code="1.5 dCi", horse_power=110, ccc=1461, vehicleBrand_id=4, fuel_id=3),
+            Engine(id=15, engine_code="Tipo F120A V8", horse_power=478, ccc=2936, vehicleBrand_id=2, fuel_id=2),
             Parts(id=1, part_number="MNF-001", manufacturer_id=3, name="Levegőszűrő", type="Szűrő", price=4500,
                   amount=50, min_amount=10, max_amount=100),
             Parts(id=2, part_number="BSC-002", manufacturer_id=5, name="Olajszűrő", type="Szűrő", price=3200, amount=85,
@@ -293,6 +303,10 @@ def seed_examples():
             Vehicle(id=10, vehicle_type_id=1, modell_id=10),
             Vehicle(id=11, vehicle_type_id=1, modell_id=11),
             Vehicle(id=12, vehicle_type_id=2, modell_id=12),
+            Vehicle(id=13, vehicle_type_id=1, modell_id=13),
+            Vehicle(id=14, vehicle_type_id=1, modell_id=14),
+            Vehicle(id=15, vehicle_type_id=1, modell_id=15),
+            Vehicle(id=16, vehicle_type_id=1, modell_id=16),
             MotorCompatibility(id=1, modell_id=1, engine_id=1),
             MotorCompatibility(id=2, modell_id=2, engine_id=2),
             MotorCompatibility(id=3, modell_id=6, engine_id=6),
@@ -307,6 +321,14 @@ def seed_examples():
             MotorCompatibility(id=12, modell_id=9, engine_id=8),
             MotorCompatibility(id=13, modell_id=6, engine_id=7),
             MotorCompatibility(id=14, modell_id=7, engine_id=6),
+            MotorCompatibility(id=15, modell_id=16, engine_id=6),
+            MotorCompatibility(id=18, modell_id=6, engine_id=12),
+            MotorCompatibility(id=19, modell_id=7, engine_id=12),
+            MotorCompatibility(id=20, modell_id=4, engine_id=14),
+            MotorCompatibility(id=21, modell_id=14, engine_id=14),
+            MotorCompatibility(id=22, modell_id=13, engine_id=4),
+            MotorCompatibility(id=23, modell_id=13, engine_id=13),
+            MotorCompatibility(id=24, modell_id=15, engine_id=15),
             Compatibility(id=1, part_id=4, modell_id=6, engine_id=6),
             Compatibility(id=2, part_id=7, modell_id=6, engine_id=6),
             Compatibility(id=3, part_id=7, modell_id=8, engine_id=8),
