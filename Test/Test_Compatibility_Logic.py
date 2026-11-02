@@ -112,16 +112,14 @@ class Test_Compatibility_Logic(Test_base):
             test_vehicle = Vehicle(id=1, vehicle_type_id=1, modell_id=6663)
             test_compat = Compatibility(part_id=6662, modell_id=6663, engine_id=6664)
 
-            session.add_all(
-                [test_type, test_vehiclebrand, test_part, test_model, test_engine, test_vehicle, test_compat])
+            session.add_all([test_type, test_vehiclebrand, test_part, test_model, test_engine, test_vehicle, test_compat])
             session.commit()
 
             mock_app = DummyApp()
             mock_view = DummyView()
             controller = CompatibilityController(mock_app, mock_view)
             controller.delete_compatibility()
-            deleted_compat = session.query(Compatibility).filter_by(part_id=6662, modell_id=6663,
-                                                                    engine_id=6664).first()
+            deleted_compat = session.query(Compatibility).filter_by(part_id=6662, modell_id=6663,engine_id=6664).first()
             self.assertIsNone(deleted_compat, "A kompatibilitás hozzárendelés nem törlődött az adatbázisból!")
     def test_load_all_parts(self):
         with Sessionlocal() as session:
@@ -154,7 +152,7 @@ class Test_Compatibility_Logic(Test_base):
             controller = CompatibilityController(mock_app, mock_view)
 
             controller.load_engines('FireBird')
-            expected_engine_string = "Engine-2000ccm, 150LE"
+            expected_engine_string = "Engine | 2000ccm, 150LE"
             self.assertIn(expected_engine_string, mock_view.engine_dropdown.values, "A motor nem töltődött be a legördülőbe!")
 
     def test_load_models(self):

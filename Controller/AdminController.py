@@ -211,6 +211,9 @@ class AdminController:
                 )
 
     def storno_transaction(self):
+        if self.main_app.current_user.role_id != ROLE_ADMIN:
+            messagebox.showerror("Hiba", "Nincs jogosultságod a tranzakciók stornózásához!")
+            return
         selected = self.view.admin_log_tree.selection()
         if not selected:
             messagebox.showwarning("Figyelem", "Kérlek válassz ki egy tranzakciót a stornózáshoz!")

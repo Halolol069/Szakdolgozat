@@ -8,7 +8,7 @@ import customtkinter
 from PIL import Image
 from sqlalchemy import func
 
-from Model.database import Parts, Sessionlocal, SellItem, SellHeader, Manufacturer
+from Model.database import Parts, Sessionlocal, SellItem, SellHeader, Manufacturer, ROLE_ADMIN
 from View.AddPartView import AddPartView
 from View.EditPartView import EditPartView
 
@@ -124,7 +124,8 @@ class PartsController:
                         line_tag = ("high_stock",)
                     else:
                         line_tag = ("normal",)
-                    self.view.tree.insert("", "end", values=(part.id, part.part_number, part.name, part.type, part.price, part.amount),tags=line_tag)
+                    recommended_qty = max(0, part.max_amount - part.amount)
+                    self.view.tree.insert("", "end", values=(part.id, part.part_number, part.name, part.type, part.price, part.amount, recommended_qty),tags=line_tag)
 
             except Exception as e:
                 messagebox.showerror("Hiba",f"Hiba történt az adatbázis lekérdezéskor: {e} ")
@@ -146,7 +147,7 @@ class PartsController:
         self.add_view = AddPartView(self.view, man_dict)
         self.add_view.grab_set()
 
-        self.current_image_path = None
+        self.current_add_image_path = None
         self.add_view.upload_button.configure(command=self.upload_add_image)
         self.add_view.save_button.configure(command=self.save_part)
 
@@ -390,6 +391,9 @@ class PartsController:
             self.load_parts()
 
     def delete_part(self, part_id):
+        if self.main_app.current_user.role_id != ROLE_ADMIN:
+            messagebox.showerror("Hiba", "Nincs jogosultságod alkatrészt törölni!")
+            return False
         with Sessionlocal() as session:
             try:
                 part_to_delete = session.query(Parts).filter(Parts.id == part_id).first()
