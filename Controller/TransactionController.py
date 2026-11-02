@@ -87,7 +87,7 @@ class TransactionController:
                 engine_list = []
                 if model:
                     for mc in model.motor_comps:
-                        engine_list.append(mc.engine.engine_code)
+                        engine_list.append(f"{mc.engine.engine_code}- {mc.engine.ccc}ccm, {mc.engine.horse_power}LE")
                         
                 self.view.engine_dropdown.configure(values=engine_list, command=self.filter_parts_by_vehicle)
             except Exception as e:
@@ -98,7 +98,7 @@ class TransactionController:
             self.view.transaction_tree.delete(item)
 
         selected_model = self.view.model_dropdown.get()
-
+        engine_code_only = selected_engine.split("-")[0] if "-" in selected_engine else selected_engine
         with Sessionlocal() as session:
             try:
                 compact_parts = (
@@ -106,7 +106,7 @@ class TransactionController:
                     .join(Compatibility, Parts.id == Compatibility.part_id)
                     .join(Modell, Compatibility.modell_id == Modell.id)
                     .join(Engine, Compatibility.engine_id == Engine.id)
-                    .filter(Modell.name == selected_model, Engine.engine_code == selected_engine)
+                    .filter(Modell.name == selected_model, Engine.engine_code == engine_code_only)
                     .all()
                 )
                 if not compact_parts:

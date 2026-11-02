@@ -17,7 +17,8 @@ class TransactionView(customtkinter.CTkFrame):
 
         self.filter_frame = customtkinter.CTkFrame(self, fg_color="transparent")
         self.filter_frame.grid(row=1, column=0, columnspan=3, padx=20, pady=20, sticky="nsew")
-        self.filter_frame.grid_columnconfigure((0,1,2,3,4), weight=1)
+        self.filter_frame.grid_columnconfigure((0,1,2,4), weight=1)
+        self.filter_frame.grid_columnconfigure(3, weight=2)
 
         self.vehicletype_dropdown = customtkinter.CTkOptionMenu(self.filter_frame, values=["Jármű típus"])
         self.vehicletype_dropdown.grid(row=0, column=0, padx=20, pady=5, sticky="nsew")
@@ -31,7 +32,7 @@ class TransactionView(customtkinter.CTkFrame):
         self.model_dropdown.grid(row=0, column=2, padx=20, pady=5, sticky="nsew")
         self.model_dropdown.set("Modell")
 
-        self.engine_dropdown = customtkinter.CTkOptionMenu(self.filter_frame, values=["Motor"])
+        self.engine_dropdown = customtkinter.CTkOptionMenu(self.filter_frame, values=["Motor"], dynamic_resizing=False, width=250)
         self.engine_dropdown.grid(row=0, column=3, padx=20, pady=5, sticky="nsew")
         self.engine_dropdown.set("Motor")
 

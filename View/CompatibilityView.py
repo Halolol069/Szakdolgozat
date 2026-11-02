@@ -5,12 +5,14 @@ class CompatibilityView(customtkinter.CTkFrame):
     def search_action(self):
         self.selected_engine = self.engine_dropdown.get()
         if self.selected_engine == "":
-            messagebox.showerror("Error", "Please select an engine")
+            messagebox.showerror("Hiba", "Kérlek válasz egy motort!")
             return
-        self.controller.gets_parts_by_engine(self.selected_engine)
+
+        engine_code_only = self.selected_engine.split("-")[0] if "-" in self.selected_engine else self.selected_engine
+        self.controller.gets_parts_by_engine(engine_code_only)
 
     def show_no_part_msgb(self):
-        messagebox.showinfo("NoParts", "No parts for the engine")
+        messagebox.showinfo("Hiba", "Nincs alkatrész a motorhoz")
 
     def save_action(self):
         if (self.vehiclebrand_dropdown.get() == "Márka" or self.model_dropdown.get() == "Modell"  or
@@ -56,7 +58,7 @@ class CompatibilityView(customtkinter.CTkFrame):
 
         engine_lbl = customtkinter.CTkLabel(self.car_filter, text="Motorkód:", anchor="w")
         engine_lbl.pack(fill="x", padx=20, pady=(5, 2))
-        self.engine_dropdown = customtkinter.CTkOptionMenu(self.car_filter,values=["Motor"], height=35)
+        self.engine_dropdown = customtkinter.CTkOptionMenu(self.car_filter,values=["Motor"], height=35, dynamic_resizing=False, width=240)
         self.engine_dropdown.pack(fill="x",pady=(0,20),padx=20)
 
         self.show_parts = customtkinter.CTkFrame(self, corner_radius=10)
