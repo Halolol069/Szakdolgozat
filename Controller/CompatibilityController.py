@@ -1,3 +1,5 @@
+from tkinter import messagebox
+
 from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine, Vehicle, VehicleType
 
 class CompatibilityController:
@@ -68,7 +70,7 @@ class CompatibilityController:
                         man_name = parts.manufacturer.name
                     self.view.parts_tree.insert(parent="",index="end",values=(parts.name, man_name, parts.type, parts.price))
             except Exception as e:
-                print("Az alkatrészek betöltése sikertelen!", e)
+                messagebox.showerror("Az alkatrészek betöltése sikertelen!", e)
 
     def save_compatibility(self):
         with Sessionlocal() as session:

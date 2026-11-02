@@ -37,9 +37,6 @@ class CartView(customtkinter.CTkToplevel):
         self.cart_tree.column("total", width=130, anchor="e")
         self.cart_tree.pack(fill="both", expand=True, padx=10, pady=10)
 
-        summary_frame = customtkinter.CTkFrame(self, fg_color="gray25", corner_radius=8)
-        summary_frame.pack(fill="x", padx=20, pady=5)
-
         self.total_label = customtkinter.CTkLabel(self, text="Végösszeg: 0 Ft", font=customtkinter.CTkFont(size=18, weight="bold"))
         self.total_label.pack(pady=10, anchor="e", padx=20)
 

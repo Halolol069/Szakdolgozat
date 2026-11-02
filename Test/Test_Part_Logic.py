@@ -62,6 +62,8 @@ class DummyAddView:
         self.min_amount = DummyVar(5)
         self.max_amount = DummyVar(5)
         self.manufacturer_id = DummyVar(1)
+        self.manufacturer_combobox = DummyVar("Lemförder")
+        self.manufacturer_dict = {"Lemförder": 1}
 
     def destroy(self):
         pass
@@ -76,6 +78,8 @@ class DummyEditView:
         self.min_amount = DummyVar(5)
         self.max_amount = DummyVar(5)
         self.manufacturer_id = DummyVar(1)
+        self.manufacturer_combobox = DummyVar("Lemförder")
+        self.manufacturer_dict = {"Lemförder": 1}
 
     def destroy(self):
         pass

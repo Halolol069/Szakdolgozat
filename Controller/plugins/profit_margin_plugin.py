@@ -22,39 +22,43 @@ def calculate_margin(net_price:float, margin_percent:float):
     return sell_price, profit
 
 def open_margin_window():
-    window = customtkinter.CTkToplevel()
-    window.title("Árrés kalkulátor")
-    window.geometry("400x300")
-    window.attributes("-topmost", True)
+    if not hasattr(open_margin_window, "window") or not open_margin_window.window.winfo_exists():
+        window = customtkinter.CTkToplevel()
+        open_margin_window.window = window
+        window.title("Árrés kalkulátor")
+        window.geometry("400x300")
+        window.attributes("-topmost", True)
 
-    title_label=customtkinter.CTkLabel(window, text="Eladási ár számoló", font=("Arial", 16, "bold"))
-    title_label.pack(pady=15)
+        title_label=customtkinter.CTkLabel(window, text="Eladási ár számoló", font=("Arial", 16, "bold"))
+        title_label.pack(pady=15)
 
-    net_entry=customtkinter.CTkEntry(window, placeholder_text="Beszerzési ár (%)...")
-    net_entry.pack(pady=10)
+        net_entry=customtkinter.CTkEntry(window, placeholder_text="Beszerzési ár (Ft)...")
+        net_entry.pack(pady=10)
 
-    margin_entry=customtkinter.CTkEntry(window, placeholder_text="Haszonkulcs (%)...")
-    margin_entry.pack(pady=10)
+        margin_entry=customtkinter.CTkEntry(window, placeholder_text="Haszonkulcs (%)...")
+        margin_entry.pack(pady=10)
 
-    result_price_label=customtkinter.CTkLabel(window, text="Eladási ár: - Ft",font=("Arial", 16, "bold"))
-    result_price_label.pack(pady=10)
+        result_price_label=customtkinter.CTkLabel(window, text="Eladási ár: - Ft",font=("Arial", 16, "bold"))
+        result_price_label.pack(pady=10)
 
-    result_profit_label = customtkinter.CTkLabel(window, text="Tiszta haszon: - Ft",font=("Arial", 16, "bold"))
-    result_profit_label.pack(pady=5)
+        result_profit_label = customtkinter.CTkLabel(window, text="Tiszta haszon: - Ft",font=("Arial", 16, "bold"))
+        result_profit_label.pack(pady=5)
 
-    def calculate():
-        try:
-            net_price = float(net_entry.get())
-            margin_percent = float(margin_entry.get())
+        def calculate():
+            try:
+                net_price = float(net_entry.get())
+                margin_percent = float(margin_entry.get())
 
-            sell_price, profit = calculate_margin(net_price, margin_percent)
+                sell_price, profit = calculate_margin(net_price, margin_percent)
 
-            result_price_label.configure(text=f"Eladási ár: {sell_price:,.0f}Ft")
-            result_profit_label.configure(text=f"Tiszta haszon: {profit:,.0f}Ft")
+                result_price_label.configure(text=f"Eladási ár: {sell_price:,.0f}Ft")
+                result_profit_label.configure(text=f"Tiszta haszon: {profit:,.0f}Ft")
 
-        except ValueError:
-            result_price_label.configure(text="Hibás szám!", text_color="red")
-            result_profit_label.configure(text="")
-    calculate_button = customtkinter.CTkButton(window,text="Kalkuláció", command=calculate)
-    calculate_button.pack(pady=15)
-
+            except ValueError:
+                result_price_label.configure(text="Hibás szám!", text_color="red")
+                result_profit_label.configure(text="")
+        calculate_button = customtkinter.CTkButton(window,text="Kalkuláció", command=calculate)
+        calculate_button.pack(pady=15)
+    else:
+        open_margin_window.window.focus()
+        open_margin_window.window.lift()

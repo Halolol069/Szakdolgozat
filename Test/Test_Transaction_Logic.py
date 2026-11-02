@@ -92,8 +92,7 @@ class Test_Transaction_Logic(Test_base):
     @unittest.mock.patch('Controller.TransactionController.messagebox.showinfo')
     @unittest.mock.patch('Controller.TransactionController.TransactionController.generate_batch_receipt')
     @unittest.mock.patch('Controller.TransactionController.filedialog.asksaveasfilename', return_value="teszt.pdf")
-    @unittest.mock.patch('Controller.TransactionController.customtkinter.CTkInputDialog.get_input',
-                         return_value="Teszt Vevő")
+    @unittest.mock.patch('Controller.TransactionController.customtkinter.CTkInputDialog.get_input',return_value="Teszt Vevő")
     def test_execute_cart_transaction_expense(self,*mock_args):
         with Sessionlocal() as session:
             test_part = Parts(

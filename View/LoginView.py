@@ -12,9 +12,6 @@ class LoginView(customtkinter.CTkFrame):
         self.subtitle_label = customtkinter.CTkLabel(self.card,text="Készletgazdálkodási Rendszer", font=customtkinter.CTkFont(size=13), text_color="gray70")
         self.subtitle_label.pack(padx=40, pady=(0, 15))
 
-        self.registration_label = customtkinter.CTkLabel(self.card,text='')
-        self.registration_label.pack(fill='x', padx=30)
-
         self.error_label = customtkinter.CTkLabel(self.card,text='')
         self.error_label.pack(fill='x',padx=30, pady=(0,5))
 
@@ -32,9 +29,6 @@ class LoginView(customtkinter.CTkFrame):
 
         self.show_password_checkbox = customtkinter.CTkCheckBox(self.card, text="Jelszó megjelenítése",command=self.toggle_password, font=customtkinter.CTkFont(size=12))
         self.show_password_checkbox.pack(padx=30, pady=(0,20), anchor="w")
-
-        self.register_button = customtkinter.CTkButton(self.card,text="Regisztráció", height=36, fg_color="gray35", hover_color="gray25")
-        self.register_button.pack(padx=30,pady=(0,30), fill="x")
 
         self.login_button = customtkinter.CTkButton(self.card,text="Belépés", height=40, font=customtkinter.CTkFont(size=14, weight="bold"))
         self.login_button.pack(padx=30, pady=(0,10), fill="x")
