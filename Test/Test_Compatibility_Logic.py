@@ -154,8 +154,8 @@ class Test_Compatibility_Logic(Test_base):
             controller = CompatibilityController(mock_app, mock_view)
 
             controller.load_engines('FireBird')
-
-            self.assertIn("Engine", mock_view.engine_dropdown.values, "A motor nem töltődött be a legördülőbe!")
+            expected_engine_string = "Engine-2000ccm, 150LE"
+            self.assertIn(expected_engine_string, mock_view.engine_dropdown.values, "A motor nem töltődött be a legördülőbe!")
 
     def test_load_models(self):
         with Sessionlocal() as session:
