@@ -65,19 +65,19 @@ def open_frame():
                 selected_type = type_dropdown.get()
                 if selected_type == "Coll -> Milliméter":
                     coll = calculate_mm(value)
-                    result_label.configure(text=f"Eredmény: {coll:.1f} mm", text_color="white")
+                    result_label.configure(text=f"Eredmény: {coll:.1f} mm")
                 elif selected_type == "Gallon -> Liter":
                     gallon = calculate_liter(value)
-                    result_label.configure(text=f"Eredmény: {gallon:.1f} l", text_color="white")
+                    result_label.configure(text=f"Eredmény: {gallon:.1f} l")
                 elif selected_type == "PSI -> Bar":
                     psi = calculate_bar(value)
-                    result_label.configure(text=f"Eredmény: {psi:.1f} bar", text_color="white")
+                    result_label.configure(text=f"Eredmény: {psi:.1f} bar")
                 elif selected_type == "Lóerő -> Kilowatt":
                     hp = calculate_kw(value)
-                    result_label.configure(text=f"Eredmény: {hp:.1f} kW", text_color="white")
+                    result_label.configure(text=f"Eredmény: {hp:.1f} kW")
                 elif selected_type == "Font-láb -> Newtonméter":
                     lb = calculate_nm(value)
-                    result_label.configure(text=f"Eredmény: {lb:.1f} Nm", text_color="white")
+                    result_label.configure(text=f"Eredmény: {lb:.1f} Nm")
 
             except ValueError:
                 result_label.configure(text="Hibás szám!", text_color="red")

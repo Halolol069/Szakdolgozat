@@ -54,7 +54,7 @@ class CompatibilityController:
 
             self.engine_list = []
             for elements in self.model.motor_comps:
-                self.engine_list.append(f"{elements.engine.engine_code}")
+                self.engine_list.append(f"{elements.engine.engine_code}-{elements.engine.ccc}ccm, {elements.engine.horse_power}LE")
             self.view.engine_dropdown.configure(values=self.engine_list)
 
     def load_all_parts(self):
@@ -75,10 +75,12 @@ class CompatibilityController:
     def save_compatibility(self):
         with Sessionlocal() as session:
             self.selected_parts = self.view.parts_tree.selection()
+            raw_engine = self.view.engine_dropdown.get()
+            engine_code_only = raw_engine.split("-")[0] if "-" in raw_engine else raw_engine
             vehicle_data = {
                 "vehiclebrand": self.view.vehiclebrand_dropdown.get(),
                 "model": self.view.model_dropdown.get(),
-                "engine":self.view.engine_dropdown.get()
+                "engine":engine_code_only
             }
             for part_id in self.selected_parts:
                 line_data = self.view.parts_tree.item(part_id, "values")
@@ -104,9 +106,12 @@ class CompatibilityController:
             messagebox.showwarning("Figyelem", "Kérlek válassz ki alkatrészeket a táblázatból a törléshez!")
             return
 
+        raw_engine = self.view.engine_dropdown.get()
+        engine_code_only = raw_engine.split("-")[0] if "-" in raw_engine else raw_engine
+
         vehicle_data = {
             "model": self.view.model_dropdown.get(),
-            "engine": self.view.engine_dropdown.get()
+            "engine": engine_code_only
         }
         with Sessionlocal() as session:
             try:
