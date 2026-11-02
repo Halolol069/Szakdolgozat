@@ -15,9 +15,16 @@ class CompatibilityView(customtkinter.CTkFrame):
     def save_action(self):
         if (self.vehiclebrand_dropdown.get() == "Márka" or self.model_dropdown.get() == "Modell"  or
                 self.engine_dropdown.get() == "Motor"):
-            messagebox.showerror("Error", "Please select a vehicle and model")
+            messagebox.showerror("Hiba", "Kérlek válassz ki egy autót és motort a szűrőben a mentésehez!")
             return
         self.controller.save_compatibility()
+
+    def delete_action(self):
+        if (self.vehiclebrand_dropdown.get() == "Márka" or self.model_dropdown.get() == "Modell" or
+                self.engine_dropdown.get() == "Motor"):
+            messagebox.showerror("Hiba", "Kérlek válassz ki egy autót és motort a szűrőben a törléshez!")
+            return
+        self.controller.delete_compatibility()
 
     def __init__(self, master):
         super().__init__(master)
@@ -83,12 +90,14 @@ class CompatibilityView(customtkinter.CTkFrame):
         self.save_button = customtkinter.CTkButton(action_frame, text="Kijelöltek Hozzárendelése", command=self.save_action,fg_color="green",
                                                    hover_color="darkgreen", height=38, font=customtkinter.CTkFont(weight="bold"))
         self.save_button.grid(row=0, column=0, padx=(0, 10))
+        self.delete_button = customtkinter.CTkButton(action_frame, text="Hozzárendelés Törlése", fg_color="red",hover_color="darkred", height=38, command=self.delete_action,
+                                                     font=customtkinter.CTkFont(weight="bold"))
+        self.delete_button.grid(row=0, column=1, padx=(0, 10))
         self.save_button_label = customtkinter.CTkLabel(action_frame, text="")
-        self.save_button_label.grid(row=0, column=1, padx=5)
+        self.save_button_label.grid(row=0, column=2, padx=5)
         self.reset_parts_button = customtkinter.CTkButton(action_frame, text="Összes alkatrész",command=lambda: self.controller.load_all_parts(),fg_color="gray40", hover_color="gray30", height=38)
-        self.reset_parts_button.grid(row=0, column=2, padx=10)
+        self.reset_parts_button.grid(row=0, column=3, padx=10)
         self.search_button = customtkinter.CTkButton(action_frame, text="Search", command=self.search_action)
-        self.search_button.grid(row=0, column=3, padx=10)
+        self.search_button.grid(row=0, column=4, padx=10)
         self.search_button_label = customtkinter.CTkLabel(action_frame, text="")
-        self.search_button_label.grid(row=0, column=4, padx=5)
-
+        self.search_button_label.grid(row=0, column=5, padx=5)
