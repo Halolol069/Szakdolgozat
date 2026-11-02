@@ -69,6 +69,8 @@ class DummyView:
     def show_no_part_msgb(self):
         self.msgbox_called = True
 
+    def after(self, ms, func):
+        func()
 class MockController:
     def __init__(self):
         self.received_engine = None
@@ -98,6 +100,29 @@ class Test_Compatibility_Logic(Test_base):
 
             self.assertIn("Test_Part_ID", mock_view.parts_tree.removed_item, "The selection was not removed from the table after saving the compatibility!")
 
+    def test_delete_compatibility(self):
+        with Sessionlocal() as session:
+            test_type = VehicleType(id=1, name="Személyautó")
+            test_vehiclebrand = VehicleBrand(id=6661, name="Audi", country="Germany")
+            test_part = Parts(id=6662, name='TestFek', manufacturer_id=1, part_number='A-Fek-01', type='Fék', price=210,
+                              amount=1, min_amount=1, max_amount=10)
+            test_model = Modell(id=6663, name='Model', vehicleBrand_id=6661, generation=1, date=date(2021, 6, 1))
+            test_engine = Engine(id=6664, engine_code='Engine', vehicleBrand_id=6661, horse_power=150, ccc=2000,
+                                 fuel_id=1)
+            test_vehicle = Vehicle(id=1, vehicle_type_id=1, modell_id=6663)
+            test_compat = Compatibility(part_id=6662, modell_id=6663, engine_id=6664)
+
+            session.add_all(
+                [test_type, test_vehiclebrand, test_part, test_model, test_engine, test_vehicle, test_compat])
+            session.commit()
+
+            mock_app = DummyApp()
+            mock_view = DummyView()
+            controller = CompatibilityController(mock_app, mock_view)
+            controller.delete_compatibility()
+            deleted_compat = session.query(Compatibility).filter_by(part_id=6662, modell_id=6663,
+                                                                    engine_id=6664).first()
+            self.assertIsNone(deleted_compat, "A kompatibilitás hozzárendelés nem törlődött az adatbázisból!")
     def test_load_all_parts(self):
         with Sessionlocal() as session:
             test_part = Parts(id=3332,name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék', price=210,

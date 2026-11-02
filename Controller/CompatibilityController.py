@@ -9,7 +9,7 @@ class CompatibilityController:
         self.view.controller = self
         self.load_vehicletype()
         self.load_all_parts()
-        self.view.save_button.configure(command=self.save_compatibility)
+
 
     def load_vehicletype(self):
         with Sessionlocal() as session:
@@ -96,6 +96,44 @@ class CompatibilityController:
                 self.view.save_button_label.configure(text="Sikertelen mentés",text_color="red")
             else:
                 self.view.save_button_label.configure(text="Sikeres mentés", text_color="green")
+            self.view.after(3000, lambda: self.view.save_button_label.configure(text=""))
+
+    def delete_compatibility(self):
+        self.selected_parts = self.view.parts_tree.selection()
+        if not self.selected_parts:
+            messagebox.showwarning("Figyelem", "Kérlek válassz ki alkatrészeket a táblázatból a törléshez!")
+            return
+
+        vehicle_data = {
+            "model": self.view.model_dropdown.get(),
+            "engine": self.view.engine_dropdown.get()
+        }
+        with Sessionlocal() as session:
+            try:
+                model = session.query(Modell).filter_by(name=vehicle_data["model"]).first()
+                engine = session.query(Engine).filter_by(engine_code=vehicle_data["engine"]).first()
+
+                if not model or not engine:
+                    messagebox.showerror("Hiba", "Érvénytelen modell vagy motor!")
+                    return
+
+                deleted_count = 0
+                for part_id in self.selected_parts:
+                    line_data = self.view.parts_tree.item(part_id, "values")
+                    part = session.query(Parts).filter_by(name=line_data[0]).first()
+                    if part:
+                        existing = session.query(Compatibility).filter_by(part_id=part.id, engine_id=engine.id, modell_id=model.id).first()
+                        if existing:
+                            session.delete(existing)
+                            deleted_count += 1
+                session.commit()
+                self.view.save_button_label.configure(text=f"Sikeres törlés ({deleted_count} db)", text_color="green")
+                self.view.after(3000, lambda: self.view.save_button_label.configure(text=""))
+                self.gets_parts_by_engine(vehicle_data["engine"])
+
+            except Exception as e:
+                session.rollback()
+                messagebox.showerror("Hiba", f"Hiba történt a törlés során: {e}")
 
     def gets_parts_by_engine(self,engine_code):
         for parts in self.view.parts_tree.get_children():
