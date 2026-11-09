@@ -329,7 +329,7 @@ class DashboardController:
     def show_low_stock_popup(self, low_part):
         popup = customtkinter.CTkToplevel()
         popup.title("Kevés az alkatrész!")
-        popup.geometry("500x400")
+        popup.geometry("620x450")
         popup_label = customtkinter.CTkLabel(popup, text="Alkatrészek:")
         popup_label.pack(pady=10)
 
@@ -341,7 +341,7 @@ class DashboardController:
         columns = ["part_number", "name", "amount", "for_order"]
         style = ttk.Style()
         style.theme_use("default")
-        style.configure("Treeview", background="#2b2b2b", foreground="white", fieldbackground="#2b2b2b", borderwidth=0)
+        style.configure("Treeview", background="#2b2b2b", foreground="white", fieldbackground="#2b2b2b", borderwidth=0, rowheight=25)
         style.map('Treeview', background=[('selected', '#1f538d')])
         style.configure("Treeview.Heading", background="#565b5e", foreground="white", relief="flat")
         style.map("Treeview.Heading", background=[('active', '#343638')])
@@ -350,22 +350,25 @@ class DashboardController:
         parts_tree.heading("name", text="Megnevezés")
         parts_tree.heading("amount", text="Mennyiség")
         parts_tree.heading("for_order", text="Rendelési javaslat")
-        parts_tree.column("part_number", width=100, anchor="center")
-        parts_tree.column("name", width=100, anchor="center")
-        parts_tree.column("amount", width=80, anchor="center")
-        parts_tree.column("for_order", width=120, anchor="center")
+        parts_tree.column("part_number", width=120, anchor="center")
+        parts_tree.column("name", width=220, anchor="w")
+        parts_tree.column("amount", width=90, anchor="center")
+        parts_tree.column("for_order", width=140, anchor="center")
 
-        parts_tree.grid(row=0, column=0, padx=20, pady=20, sticky="ns")
+        parts_tree.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
 
         parts_tree.scrollbar = customtkinter.CTkScrollbar(table_frame, command=parts_tree.yview)
         parts_tree.scrollbar.grid(row=0, column=1, sticky="ns")
         parts_tree.configure(yscrollcommand=parts_tree.scrollbar.set)
 
-        popup_continue_button = customtkinter.CTkButton(popup, text="Folytatás", command=lambda : self.option_continue(popup))
-        popup_continue_button.pack(pady=10)
+        button_frame = customtkinter.CTkFrame(popup, fg_color="transparent")
+        button_frame.pack(pady=(5, 20))
 
-        popup_cancel_button = customtkinter.CTkButton(popup, text="Kilépés", command=popup.destroy)
-        popup_cancel_button.pack(pady=10)
+        popup_continue_button = customtkinter.CTkButton(button_frame, text="Folytatás a raktárhoz", command=lambda: self.option_continue(popup))
+        popup_continue_button.grid(row=0, column=0, padx=10)
+
+        popup_cancel_button = customtkinter.CTkButton(button_frame, text="Bezárás", fg_color="gray40",hover_color="gray30", command=popup.destroy)
+        popup_cancel_button.grid(row=0, column=1, padx=10)
         for part_number, name, amount, order in low_part:
             parts_tree.insert("", "end", values=(part_number, name, amount, order))
 
