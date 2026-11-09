@@ -7,9 +7,7 @@ class CompatibilityView(customtkinter.CTkFrame):
         if self.selected_engine == "":
             messagebox.showerror("Hiba", "Kérlek válasz egy motort!")
             return
-
-        engine_code_only = self.selected_engine.split(" | ")[0] if " | " in self.selected_engine else self.selected_engine
-        self.controller.gets_parts_by_engine(engine_code_only)
+        self.controller.gets_parts_by_engine(self.selected_engine)
 
     def show_no_part_msgb(self):
         messagebox.showinfo("Hiba", "Nincs alkatrész a motorhoz")

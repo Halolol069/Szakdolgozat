@@ -7,6 +7,7 @@ from tkinter import filedialog, messagebox
 import customtkinter
 from PIL import Image
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from Model.database import Parts, Sessionlocal, SellItem, SellHeader, Manufacturer, ROLE_ADMIN
 from View.AddPartView import AddPartView
@@ -38,7 +39,7 @@ class PartsController:
     def role_permission(self):
         current_user = self.main_app.current_user
 
-        if current_user and current_user.role_id == 2:
+        if current_user and current_user.role_id != ROLE_ADMIN :
             for btn in (self.view.add_button, self.view.delete_button, self.view.edit_button):
                 if hasattr(btn, "pack_forget"):
                     btn.pack_forget()
@@ -80,6 +81,7 @@ class PartsController:
             self.view.preview_info_label.configure(
                 text=f"Cikkszám: {part.part_number}\n"
                      f"Gyártó: {man_name}\n"
+                     f"Polc: {part.location if part.location else 'Nincs megadva'}\n"
                      f"Min. szint: {part.min_amount} db\n"
                      f"Max. szint: {part.max_amount} db"
             )
@@ -116,8 +118,6 @@ class PartsController:
                     )
                 parts_list = query.order_by(Parts.id).all()
                 for part in parts_list:
-                    self.part_indicator(part.id)
-                    session.refresh(part)
                     if part.amount < part.min_amount:
                         line_tag = ("low_stock",)
                     elif part.amount >= part.max_amount:
@@ -125,7 +125,7 @@ class PartsController:
                     else:
                         line_tag = ("normal",)
                     recommended_qty = max(0, part.max_amount - part.amount)
-                    self.view.tree.insert("", "end", values=(part.id, part.part_number, part.name, part.type, part.price, part.amount, recommended_qty),tags=line_tag)
+                    self.view.tree.insert("", "end", values=(part.id, part.part_number, part.name, part.type, part.price, part.amount, recommended_qty, part.location),tags=line_tag)
 
             except Exception as e:
                 messagebox.showerror("Hiba",f"Hiba történt az adatbázis lekérdezéskor: {e} ")
@@ -158,7 +158,6 @@ class PartsController:
 
         selected_man_name = self.add_view.manufacturer_combobox.get()
         man_id = self.add_view.manufacturer_dict.get(selected_man_name)
-
         if not man_id:
             messagebox.showerror("Hiba", "Kérlek, válassz egy érvényes gyártót a listából!")
             return
@@ -168,6 +167,7 @@ class PartsController:
             amount = int(self.add_view.amount.get())
             min_amount = int(self.add_view.min_amount.get())
             max_amount = int(self.add_view.max_amount.get())
+            location_val = self.add_view.location.get()
 
         except ValueError:
             messagebox.showwarning("Hiba", "Az ár, készlet és gyártó ID mezőkbe csak számot írhatsz!")
@@ -175,6 +175,10 @@ class PartsController:
 
         if not part_num or not name or not part_type:
             messagebox.showwarning("Figyelmeztetés","Kérlek tölts ki minden mezőt!")
+            return
+
+        if min(price, amount, min_amount, max_amount) < 0:
+            messagebox.showwarning("Hiba", "Negatív érték nem adható meg!")
             return
 
         new_parts = Parts(
@@ -186,7 +190,8 @@ class PartsController:
             min_amount=min_amount,
             max_amount=max_amount,
             manufacturer_id=man_id,
-            image_path= getattr(self, 'current_add_image_path', None)
+            image_path= getattr(self, 'current_add_image_path', None),
+            location = location_val
         )
 
         with Sessionlocal() as session:
@@ -284,6 +289,8 @@ class PartsController:
             self.edit_view.amount.insert(0, str(part_to_edit.amount))
             self.edit_view.min_amount.insert(0, str(part_to_edit.min_amount))
             self.edit_view.max_amount.insert(0,str(part_to_edit.max_amount))
+            if part_to_edit.location:
+                self.edit_view.location.insert(0, part_to_edit.location)
             self.current_image_path = part_to_edit.image_path
             current_man_name = "Válasz egy gyártót..."
             for name, man_id in man_dict.items():
@@ -308,6 +315,7 @@ class PartsController:
         part_type = self.edit_view.type.get()
         selected_man_name = self.edit_view.manufacturer_combobox.get()
         man_id = self.edit_view.manufacturer_dict.get(selected_man_name)
+        location_val = self.edit_view.location.get()
 
         if not man_id:
             messagebox.showerror("Hiba", "Kérlek, válassz egy érvényes gyártót a listából!")
@@ -317,6 +325,10 @@ class PartsController:
             amount = int(self.edit_view.amount.get())
             min_amount = int(self.edit_view.min_amount.get())
             max_amount = int(self.edit_view.max_amount.get())
+
+            if min(price, amount, min_amount, max_amount) < 0:
+                messagebox.showwarning("Hiba", "Negatív érték nem adható meg!")
+                return
 
             if not man_id:
                 messagebox.showerror("Hiba","Érvénytelen gyártó!")
@@ -338,7 +350,8 @@ class PartsController:
             "min_amount":min_amount,
             "max_amount":max_amount,
             "manufacturer_id": man_id,
-            "image_path":  getattr(self, 'current_image_path', None)
+            "image_path":  getattr(self, 'current_image_path', None),
+            "location": location_val
         }
 
         if self.update_part(self.selected_edit_id, new_data):
@@ -361,6 +374,7 @@ class PartsController:
                     part_to_update.max_amount = new_data['max_amount']
                     part_to_update.manufacturer_id = new_data['manufacturer_id']
                     part_to_update.image_path = new_data['image_path']
+                    part_to_update.location = new_data['location']
                     session.commit()
                     return True
                 else:
@@ -403,6 +417,10 @@ class PartsController:
                     return True
                 else:
                     return False
+            except IntegrityError:
+                session.rollback()
+                messagebox.showerror("Hiba","Ez az alkatrész nem törölhető, mert már mozgás (bevételezés/eladás) történt vele!\n(A tranzakciós napló hivatkozik rá.)")
+                return False
             except Exception as e:
                 session.rollback()
                 messagebox.showerror("Hiba",f"Hiba történt a törlés során: {e}")

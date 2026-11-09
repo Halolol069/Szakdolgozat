@@ -16,7 +16,7 @@ class DashboardView(customtkinter.CTkFrame):
 
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(15, weight=1)
+        self.sidebar_frame.grid_rowconfigure(16, weight=1)
 
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Készletkezelő",
                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
@@ -36,6 +36,9 @@ class DashboardView(customtkinter.CTkFrame):
 
         self.export_pdf_button = customtkinter.CTkButton(self.sidebar_frame, text="PDF Export")
         self.export_pdf_button.grid(row=5, column=0, padx=20, pady=10)
+
+        self.export_csv_button = customtkinter.CTkButton(self.sidebar_frame, text="CSV Export")
+        self.export_csv_button.grid(row=6, column=0, padx=20, pady=10)
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Megjelenés:", anchor="w")
         self.appearance_mode_label.grid(row=12, column=0, padx=20, pady=(10,0))

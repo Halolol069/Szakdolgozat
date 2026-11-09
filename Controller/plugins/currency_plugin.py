@@ -13,10 +13,13 @@ def register(app):
         hover_color = "red",
         command=open_currency_window
     )
-    plugin_button.grid(row=6, column=0,padx=20, pady=10)
+    plugin_button.grid(row=7, column=0,padx=20, pady=10)
 
 def calculate_huf(euro:float):
     return euro *395
+
+def calculate_dynamic_huf(euro: float, rate: float):
+    return euro * rate
 
 def open_currency_window():
     if not hasattr(open_currency_window, "window") or not open_currency_window.window.winfo_exists():
@@ -30,8 +33,12 @@ def open_currency_window():
         title_label = customtkinter.CTkLabel(window, text="Euró (EUR) -> Forint (HUF)", font=("Arial",16,"bold"))
         title_label.pack(pady=10)
 
-        info_label = customtkinter.CTkLabel(window, text="(Aktuális rögzített árfolyam: 1 EUR = 395 HUF)",font=("Arial", 11, "italic"))
+        info_label = customtkinter.CTkLabel(window, text="(Aktuális rögzített árfolyam: 1 EUR = 395 HUF, de átírható!)",font=("Arial", 11, "italic"))
         info_label.pack(pady=(0, 10))
+
+        rate_entry = customtkinter.CTkEntry(window, placeholder_text="Árfolyam (HUF)...")
+        rate_entry.insert(0, "395")
+        rate_entry.pack(pady=5)
 
         entry = customtkinter.CTkEntry(window, placeholder_text="Összeg euróban...")
         entry.pack(pady=10)
@@ -42,8 +49,9 @@ def open_currency_window():
         def calculate():
             try:
                 eur = float(entry.get())
-                huf = calculate_huf(eur)
-                result_label.configure(text=f"Eredmény: {huf:,.0f}Ft")
+                rate = float(rate_entry.get())
+                huf = calculate_dynamic_huf(eur, rate)
+                result_label.configure(text=f"Eredmény: {huf:,.0f}Ft", text_color=["black", "white"])
             except ValueError:
                 result_label.configure(text="Kérlek számot adj meg!",text_color="red")
 

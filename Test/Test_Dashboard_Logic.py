@@ -20,6 +20,7 @@ class DummyView:
         self.back_button = DummyButton()
         self.transaction_button = DummyButton()
         self.export_pdf_button = DummyButton()
+        self.export_csv_button = DummyButton()
         self.admin_button = DummyButton()
 
 class TestDashboardLogic(Test_base):

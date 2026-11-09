@@ -2,7 +2,8 @@ import datetime
 import os
 
 import bcrypt
-from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func, Column, text, UniqueConstraint
+from sqlalchemy import create_engine, String, Integer, DateTime, ForeignKey, func, Column, text, UniqueConstraint, \
+    CheckConstraint
 from dotenv import load_dotenv
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.orm import Mapped,mapped_column,sessionmaker
@@ -12,7 +13,7 @@ ROLE_WORKER = 2
 
 dotenv = load_dotenv()
 database_url = f"{os.getenv('DB_CONNECTION')}://{os.getenv('DB_USERNAME')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_DATABASE')}"
-engine = create_engine(database_url, echo=True)
+engine = create_engine(database_url, echo=False)
 class Base(DeclarativeBase):
     pass
 
@@ -52,11 +53,13 @@ class SellHeader(Base):
     __tablename__ = "sell_headers"
     id:Mapped[int] = mapped_column(primary_key=True)
     date:Mapped[datetime.datetime] = mapped_column(DateTime)
-    number:Mapped[int] = mapped_column(Integer)
+    number:Mapped[int] = mapped_column(Integer, unique=True)
+    buyer_name:Mapped[str | None] = mapped_column(String(100), nullable = True)
     sell_items:Mapped[List["SellItem"]] = relationship(back_populates="sell_header", cascade="all, delete-orphan")
 
 class Parts(Base):
     __tablename__ = "parts"
+    __table_args__ = (CheckConstraint("amount >= 0", name="ck_parts_amount_nonneg"),CheckConstraint("price >= 0", name="ck_parts_price_nonneg"),)
     id:Mapped[int] = mapped_column(primary_key=True)
     part_number:Mapped[str] = mapped_column(String(150))
     manufacturer_id:Mapped[int] = mapped_column(ForeignKey("manufacturers.id"))
@@ -71,6 +74,7 @@ class Parts(Base):
     min_amount:Mapped[int] = mapped_column(Integer)
     max_amount:Mapped[int] = mapped_column(Integer)
     image_path:Mapped[str | None] = mapped_column(String, nullable = True)
+    location:Mapped[str | None] = mapped_column(String(50), nullable=True)
 
 class Fuel(Base):
     __tablename__="fuels"
@@ -253,39 +257,39 @@ def seed_examples():
             Engine(id=14, engine_code="1.5 dCi", horse_power=110, ccc=1461, vehicleBrand_id=4, fuel_id=3),
             Engine(id=15, engine_code="Tipo F120A V8", horse_power=478, ccc=2936, vehicleBrand_id=2, fuel_id=2),
             Parts(id=1, part_number="MNF-001", manufacturer_id=3, name="Levegőszűrő", type="Szűrő", price=4500,
-                  amount=50, min_amount=10, max_amount=100),
+                  amount=50, min_amount=10, max_amount=100, location="A-sor, 1. polc"),
             Parts(id=2, part_number="BSC-002", manufacturer_id=5, name="Olajszűrő", type="Szűrő", price=3200, amount=85,
-                  min_amount=20, max_amount=150),
+                  min_amount=20, max_amount=150, location="A-sor, 2. polc"),
             Parts(id=3, part_number="VLO-003", manufacturer_id=4, name="Kuplung szett", type="Hajtáslánc", price=85000,
-                  amount=5, min_amount=2, max_amount=15),
+                  amount=5, min_amount=2, max_amount=15, location="B-sor, 1. polc"),
             Parts(id=4, part_number="BRM-004", manufacturer_id=7, name="Első fékbetét szett", type="Fékrendszer",
-                  price=18500, amount=30, min_amount=5, max_amount=50),
+                  price=18500, amount=30, min_amount=5, max_amount=50, location="C-sor, 1. polc"),
             Parts(id=5, part_number="BRM-005", manufacturer_id=7, name="Féktárcsa", type="Fékrendszer", price=25000,
-                  amount=24, min_amount=4, max_amount=40),
+                  amount=24, min_amount=4, max_amount=40, location="C-sor, 2. polc"),
             Parts(id=6, part_number="NGK-006", manufacturer_id=8, name="Gyújtógyertya", type="Gyújtás", price=4800,
-                  amount=120, min_amount=16, max_amount=200),
+                  amount=120, min_amount=16, max_amount=200, location="D-sor, 1. polc"),
             Parts(id=7, part_number="CST-007", manufacturer_id=9, name="Motorolaj 5W30 (5L)", type="Kenőanyag",
-                  price=16500, amount=45, min_amount=10, max_amount=100),
+                  price=16500, amount=45, min_amount=10, max_amount=100, location="Folyadék raktár, 1. polc"),
             Parts(id=8, part_number="SKF-008", manufacturer_id=10, name="Vízpumpa", type="Hűtés", price=21000,
-                  amount=12, min_amount=3, max_amount=25),
+                  amount=12, min_amount=3, max_amount=25, location="E-sor, 1. polc"),
             Parts(id=9, part_number="CNT-009", manufacturer_id=2, name="Vezérműszíj készlet", type="Motor alkatrész",
-                  price=45000, amount=8, min_amount=2, max_amount=15),
+                  price=45000, amount=8, min_amount=2, max_amount=15, location="E-sor, 2. polc"),
             Parts(id=10, part_number="VAL-010", manufacturer_id=4, name="H7 Izzó", type="Világítás", price=2500,
-                  amount=200, min_amount=20, max_amount=500),
+                  amount=200, min_amount=20, max_amount=500, location="D-sor, 2. polc"),
             Parts(id=11, part_number="ZFF-011", manufacturer_id=6, name="Kettőstömegű lendkerék", type="Hajtáslánc",
-                  price=165000, amount=2, min_amount=1, max_amount=5),
+                  price=165000, amount=2, min_amount=1, max_amount=5, location="B-sor, 2. polc"),
             Parts(id=12, part_number="LMF-012", manufacturer_id=1, name="Lengőkar", type="Futómű", price=32000,
-                  amount=16, min_amount=4, max_amount=30),
+                  amount=16, min_amount=4, max_amount=30, location="F-sor, 1. polc"),
             Parts(id=13, part_number="MOT-013", manufacturer_id=11, name="Motul 7100 10W-40 (4L)", type="Kenőanyag",
-                  price=19500, amount=30, min_amount=5, max_amount=50),
+                  price=19500, amount=30, min_amount=5, max_amount=50, location="Folyadék raktár, 2. polc"),
             Parts(id=14, part_number="DID-014", manufacturer_id=12, name="D.I.D Láncszett", type="Hajtáslánc",
-                  price=45000, amount=8, min_amount=2, max_amount=20),
+                  price=45000, amount=8, min_amount=2, max_amount=20, location="B-sor, 3. polc"),
             Parts(id=15, part_number="HLL-015", manufacturer_id=5, name="Xenon vezérlő elektronika", type="Világítás",
-                  price=125000, amount=2, min_amount=1, max_amount=5),
+                  price=125000, amount=2, min_amount=1, max_amount=5, location="D-sor, 3. polc"),
             Parts(id=16, part_number="SKF-016", manufacturer_id=10, name="Kardántengely csapágy", type="Hajtáslánc",
-                  price=18000, amount=3, min_amount=2, max_amount=10),
+                  price=18000, amount=3, min_amount=2, max_amount=10, location="B-sor, 4. polc"),
             Parts(id=17, part_number="KLK-017", manufacturer_id=1, name="Kipufogó tartó bak", type="Kipufogó rendszer",
-                  price=3500, amount=1, min_amount=5, max_amount=20)
+                  price=3500, amount=1, min_amount=5, max_amount=20, location="G-sor, 1. polc")
         ])
 
         session.flush()
@@ -400,21 +404,10 @@ def seed_examples():
 
         session.commit()
 
-        session.execute(text("SELECT setval('users_id_seq', (SELECT max(id) FROM users))"))
-        session.execute(text("SELECT setval('compatibilities_id_seq', (SELECT max(id) FROM compatibilities))"))
-        session.execute(text("SELECT setval('parts_id_seq', (SELECT max(id) FROM parts))"))
-        session.execute(text("SELECT setval('motorcompatibilities_id_seq', (SELECT max(id) FROM motorcompatibilities))"))
-        session.execute(text("SELECT setval('models_id_seq', (SELECT max(id) FROM models))"))
-        session.execute(text("SELECT setval('engines_id_seq', (SELECT max(id) FROM engines))"))
-        session.execute(text("SELECT setval('vehicles_id_seq', (SELECT max(id) FROM vehicles))"))
-        session.execute(text("SELECT setval('roles_id_seq', (SELECT max(id) FROM roles))"))
-        session.execute(text("SELECT setval('vehiclebrands_id_seq', (SELECT max(id) FROM vehiclebrands))"))
-        session.execute(text("SELECT setval('manufacturers_id_seq', (SELECT max(id) FROM manufacturers))"))
-        session.execute(text("SELECT setval('fuels_id_seq', (SELECT max(id) FROM fuels))"))
-        session.execute(text("SELECT setval('vehicle_types_id_seq', (SELECT max(id) FROM vehicle_types))"))
-        session.execute(text("SELECT setval('sell_headers_id_seq', (SELECT max(id) FROM sell_headers))"))
-        session.execute(text("SELECT setval('sell_items_id_seq', (SELECT max(id) FROM sell_items))"))
-        session.execute(text("SELECT setval('transaction_logs_id_seq', (SELECT max(id) FROM transaction_logs))"))
+        for table in Base.metadata.sorted_tables:
+            seq_name = f"{table.name}_id_seq"
+            reset_sql = text(f"SELECT setval('{seq_name}', coalesce((SELECT max(id) FROM {table.name}), 1))")
+            session.execute(reset_sql)
         session.commit()
 
 if __name__ == '__main__':
