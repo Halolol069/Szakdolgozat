@@ -1,3 +1,4 @@
+import csv
 import datetime
 import math
 import os.path
@@ -36,6 +37,8 @@ class DashboardController:
         self.view.transaction_button.configure(command=self.show_transaction)
 
         self.view.export_pdf_button.configure(command=self.export_inventory_pdf)
+
+        self.view.export_csv_button.configure(command=self.export_inventory_csv)
 
         self.view.admin_button.configure(command=self.open_admin_panel)
 
@@ -142,6 +145,7 @@ class DashboardController:
             except Exception as e:
                 session.rollback()
                 print("Sikertelen adatlekérés!", e)
+                return []
 
     def load_dashboard_stats(self):
         if not hasattr(self.view, "card1_value"):
@@ -153,7 +157,7 @@ class DashboardController:
 
                 total_parts_count = sum(p.amount for p in all_parts)
                 total_value = sum(p.amount * p.price for p in all_parts)
-                critical_count = sum(1 for p in all_parts if p.amount < p.min_amount)
+                critical_count = len(self.low_stock() or [])
 
                 self.view.card1_value.configure(text=f"{total_parts_count} db")
                 self.view.card2_value.configure(text=f"{total_value:,.0f} Ft".replace(",", " "))
@@ -280,6 +284,47 @@ class DashboardController:
             print(f"Hiba a PDF generálásakor: {e}")
             messagebox.showerror("Hiba", "Nem sikerült legenerálni a PDF-et.")
 
+    def export_inventory_csv(self):
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV fájlok", "*.csv"), ("Minden fájl", "*.*")],
+            title="Leltárív exportálása Excelbe"
+        )
+
+        if not filepath:
+            return
+
+        with Sessionlocal() as session:
+            try:
+                parts = session.query(Parts).all()
+                with open(filepath, mode='w', newline='', encoding='cp1250') as file:
+                    file.write("sep=;\n")
+                    writer = csv.writer(file, delimiter=';')
+
+                    writer.writerow(
+                        ["Cikkszám", "Megnevezés", "Típus", "Készlet (db)", "Egységár (Ft)", "Összérték (Ft)"])
+
+                    for part in parts:
+                        if part.part_number:
+                            safe_part_num = part.part_number
+                        else:
+                            safe_part_num = "-"
+                        if part.name:
+                            safe_name = part.name
+                        else:
+                            safe_name = "Ismeretlen"
+                        if part.type:
+                            safe_type = part.type
+                        else:
+                            safe_type = "-"
+                        total_value = part.amount * part.price
+
+                        writer.writerow([safe_part_num, safe_name, safe_type, part.amount, part.price, total_value])
+
+                messagebox.showinfo("Siker", "A leltárív sikeresen exportálva CSV formátumban!")
+            except Exception as e:
+                print(f"Hiba a CSV exportálásakor: {e}")
+                messagebox.showerror("Hiba", "Nem sikerült exportálni az adatokat.")
 
     def show_low_stock_popup(self, low_part):
         popup = customtkinter.CTkToplevel()

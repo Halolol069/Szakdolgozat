@@ -31,6 +31,11 @@ class AddPartView(customtkinter.CTkToplevel):
         self.type = customtkinter.CTkEntry(self.scrollable_frame, placeholder_text="Típus (pl. Fékrendszer)", height=36)
         self.type.pack(pady=6, padx=20, fill="x")
 
+        self.location_label = customtkinter.CTkLabel(self.scrollable_frame, text="Polc:", height=36,font=customtkinter.CTkFont(size=20, weight="bold"))
+        self.location_label.pack(pady=(10, 0), padx=20, anchor="w")
+        self.location = customtkinter.CTkEntry(self.scrollable_frame, placeholder_text="pl. A-sor, 3. polc", height=36)
+        self.location.pack(pady=6, padx=20, fill="x")
+
         self.manufacturer_label = customtkinter.CTkLabel(self.scrollable_frame, text="Gyártó:", height=36,font=customtkinter.CTkFont(size=20, weight="bold"))
         self.manufacturer_label.pack(pady=(10, 0), padx=20, anchor="w")
         self.manufacturer_names = list(self.manufacturer_dict.keys())

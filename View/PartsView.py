@@ -40,7 +40,7 @@ class PartsView(customtkinter.CTkFrame):
         style.configure("Treeview.Heading", background="gray30", foreground="white", relief="flat")
         style.map("Treeview.Heading", background=[('active', 'gray40')])
 
-        columns = ("id", "part_number", "name", "type", "price", "amount", "recommended")
+        columns = ("id", "part_number", "name", "type", "price", "amount", "recommended", "location")
         self.tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", style="Treeview")
 
         self.tree.heading("id", text="ID")
@@ -50,6 +50,7 @@ class PartsView(customtkinter.CTkFrame):
         self.tree.heading("price", text="Ár (Ft)")
         self.tree.heading("amount", text="Készlet")
         self.tree.heading("recommended", text="Ajánlott Rendelés")
+        self.tree.heading("location", text="Polc")
 
         self.tree.column("id", width=50, anchor="center")
         self.tree.column("part_number", width=150)
@@ -58,6 +59,7 @@ class PartsView(customtkinter.CTkFrame):
         self.tree.column("price", width=100, anchor="e")
         self.tree.column("amount", width=80, anchor="center")
         self.tree.column("recommended", width=120, anchor="center")
+        self.tree.column("location", width=120, anchor="center")
 
         self.tree.grid(row=0, column=0, padx=(0,10), pady=10, sticky="nsew")
 

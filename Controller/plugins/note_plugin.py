@@ -1,3 +1,5 @@
+import datetime
+
 import customtkinter
 import os
 
@@ -16,7 +18,7 @@ def register(app):
         hover_color="red",
         command=open_notes
     )
-    plugin_button.grid(row=9, column=0, padx=20, pady=10)
+    plugin_button.grid(row=8, column=0, padx=20, pady=10)
 
 def read_notes_file(filepath="note.txt"):
     if os.path.isfile(filepath):
@@ -39,6 +41,14 @@ def open_notes():
         title_label= customtkinter.CTkLabel(window, text="Napi emlékeztetők!", font=("Arial", 16, "bold"))
         title_label.pack(pady=15)
 
+        def insert_timestamp():
+            now = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M] - ")
+            textbox.insert("insert", now)
+            textbox.focus()
+
+        time_button = customtkinter.CTkButton(window, text="Időbélyeg (Dátum) beszúrása", fg_color="gray40",hover_color="gray30", width=150, command=insert_timestamp)
+        time_button.pack(pady=(0, 10))
+
         textbox = customtkinter.CTkTextbox(window, width=350, height=250)
         textbox.pack(pady=10)
 
@@ -48,11 +58,8 @@ def open_notes():
 
         def save_note():
             sentences = textbox.get("1.0", "end")
-
             write_note_file(sentences)
-
             save_button.configure(text="Sikeres mentés!", fg_color="green")
-
             window.after(2000, lambda:save_button.configure(text="Mentés", fg_color="green"))
 
         save_button = customtkinter.CTkButton(window, text="Mentés", command=save_note)

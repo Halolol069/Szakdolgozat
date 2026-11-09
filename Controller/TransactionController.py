@@ -1,5 +1,7 @@
 import datetime
+import os
 from tkinter import messagebox, filedialog
+import qrcode
 from View.CartView import CartView
 import customtkinter
 from fpdf import FPDF
@@ -87,8 +89,8 @@ class TransactionController:
                 engine_list = []
                 if model:
                     for mc in model.motor_comps:
-                        engine_list.append(f"{mc.engine.engine_code} | {mc.engine.ccc}ccm, {mc.engine.horse_power}LE")
-                        
+                        engine_list.append(f"[{mc.engine.id}] {mc.engine.engine_code} | {mc.engine.ccc}ccm, {mc.engine.horse_power}LE")
+
                 self.view.engine_dropdown.configure(values=engine_list, command=self.filter_parts_by_vehicle)
             except Exception as e:
                 print("Hiba a motorok betöltésekor!", e)
@@ -98,28 +100,27 @@ class TransactionController:
             self.view.transaction_tree.delete(item)
 
         selected_model = self.view.model_dropdown.get()
-        engine_code_only = selected_engine.split(" | ")[0] if " | " in selected_engine else selected_engine
+        if selected_engine == "Motor":
+            return
+
+        engine_id = int(selected_engine.split("]")[0].replace("[", ""))
+
         with Sessionlocal() as session:
             try:
                 compact_parts = (
                     session.query(Parts)
                     .join(Compatibility, Parts.id == Compatibility.part_id)
                     .join(Modell, Compatibility.modell_id == Modell.id)
-                    .join(Engine, Compatibility.engine_id == Engine.id)
-                    .filter(Modell.name == selected_model, Engine.engine_code == engine_code_only)
+                    .filter(Modell.name == selected_model, Compatibility.engine_id == engine_id)
                     .all()
                 )
                 if not compact_parts:
-                    messagebox.showinfo(
-                        "Nincs találat",
-                        "Ehhez a járműhöz jelenleg nincs rögzített kompatibilis alkatrész!"
-                    )
+                    messagebox.showinfo("Nincs találat","Ehhez a járműhöz jelenleg nincs rögzített kompatibilis alkatrész!")
                     return
-
                 for part in compact_parts:
-                    self.view.transaction_tree.insert("","end", values=(part.id,part.part_number, part.name, part.amount, part.type,part.price))
+                    self.view.transaction_tree.insert("", "end",values=(part.id, part.part_number, part.name, part.amount,part.type, part.price, part.location))
             except Exception as e:
-                print("Hiba a kompatiblis alkatrészek szűrésekor: ",e)
+                print("Hiba a kompatiblis alkatrészek szűrésekor: ", e)
 
     def reset_filters(self):
         if hasattr(self.view, "vehicletype_dropdown"):
@@ -146,7 +147,7 @@ class TransactionController:
                     all_parts = session.query(Parts).all()
 
                 for part in all_parts:
-                        self.view.transaction_tree.insert("", "end", values=(part.id,part.part_number, part.name, part.amount, part.type, part.price))
+                        self.view.transaction_tree.insert("", "end", values=(part.id,part.part_number, part.name, part.amount, part.type, part.price, part.location))
             except Exception as e:
                 print("Hiba történt az adatbázis mentésekor!",e)
 
@@ -274,7 +275,7 @@ class TransactionController:
                 new_header = None
                 if cart_type == "Kiadás":
                     max_num = session.query(func.max(SellHeader.number)).scalar() or 10000
-                    new_header = SellHeader(date=datetime.datetime.now(), number=max_num + 1)
+                    new_header = SellHeader(date=datetime.datetime.now(), number=max_num + 1, buyer_name=buyer_name)
                     session.add(new_header)
                     session.flush()
 
@@ -293,7 +294,7 @@ class TransactionController:
 
                         current_part.amount -= item["quantity"]
                         log_qty = -item["quantity"]
-                        log_type = "Eladás"
+                        log_type = f"Eladás (Vevő: {buyer_name})"
 
                         new_item = SellItem(
                             sell_header_id=new_header.id,
@@ -319,15 +320,20 @@ class TransactionController:
                 messagebox.showerror("Hiba", "Váratlan hiba történt a mentéskor!")
                 return False
 
-        self.generate_batch_receipt(filepath, buyer_name, cart_type)
-
-        messagebox.showinfo("Siker", "A tranzakció sikeresen rögzítve, PDF legenerálva!")
+        if self.generate_batch_receipt(filepath, buyer_name, cart_type):
+            messagebox.showinfo("Siker", "A tranzakció sikeresen rögzítve, PDF legenerálva!")
+        else:
+            messagebox.showwarning("Figyelem","A tranzakció rögzítve lett az adatbázisban, de a PDF mentése sikertelen volt!")
         self.cart.clear()
         self.load_all_parts()
         self.load_transaction_history()
         return True
     def generate_batch_receipt(self, filepath, buyer_name, cart_type):
         try:
+            qr_data = f"Datum: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} | Tipus: {cart_type} | Vevo: {buyer_name}"
+            qr_img = qrcode.make(qr_data)
+            temp_qr_path = "temp_qr.png"
+            qr_img.save(temp_qr_path)
             pdf = FPDF()
             pdf.add_page()
             pdf.add_font("Arial", "", "assets/fonts/arial.ttf")
@@ -336,6 +342,7 @@ class TransactionController:
 
             pdf.set_font("Arial", "B", 16)
             pdf.cell(0, 10, text="Szállítólevél", new_x="LMARGIN", new_y="NEXT", align="center")
+            pdf.image(temp_qr_path, x=160, y=10, w=35)
             pdf.ln(10)
 
             pdf.set_font("Arial", "B", 12)
@@ -375,8 +382,13 @@ class TransactionController:
             pdf.cell(0, 10, "Köszönjük!", align="center")
 
             pdf.output(filepath)
+
+            if os.path.exists(temp_qr_path):
+                os.remove(temp_qr_path)
+            return True
         except Exception as e:
             print(f"Hiba a pdf generálásakor: {e}")
+            return False
 
     def valid_quantity(self, raw_quantity):
         if not raw_quantity.isdigit() or int(raw_quantity) <= 0:
