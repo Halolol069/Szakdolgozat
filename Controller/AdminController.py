@@ -2,6 +2,7 @@ import datetime
 from tkinter import messagebox
 import bcrypt
 import customtkinter
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from Model.database import (
@@ -185,30 +186,21 @@ class AdminController:
         search_term = self.view.log_search_entry.get().strip().lower()
 
         with Sessionlocal() as session:
-            logs = (
-                session.query(TransactionLog, Parts.name, User.name)
-                .join(Parts, TransactionLog.part_id == Parts.id)
-                .join(User, TransactionLog.user_id == User.id)
-                .order_by(TransactionLog.date.desc())
-                .all()
-            )
-            for log, part_name, user_name in logs:
-                if search_term:
-                    haystack = f"{part_name} {user_name} {log.transaction_type}".lower()
-                    if search_term not in haystack:
-                        continue
+            query = (session.query(TransactionLog, Parts.name, User.name)
+                     .join(Parts, TransactionLog.part_id == Parts.id)
+                     .join(User, TransactionLog.user_id == User.id))
 
-                if log.date:
-                    date_str = log.date.strftime("%Y-%m-%d %H:%M")
-                else:
-                    date_str = "-"
-                if log.quantity > 0:
-                    qty_str = f"+{log.quantity}"
-                else:
-                    qty_str = str(log.quantity)
-                self.view.admin_log_tree.insert(
-                    "", "end", values=(log.id, date_str, log.transaction_type, part_name, qty_str, user_name)
-                )
+            if search_term:
+                query = query.filter(or_(
+                    Parts.name.ilike(f"%{search_term}%"),
+                    User.name.ilike(f"%{search_term}%"),
+                    TransactionLog.transaction_type.ilike(f"%{search_term}%")
+                ))
+            logs = query.order_by(TransactionLog.date.desc()).limit(150).all()
+            for log, part_name, user_name in logs:
+                date_str = log.date.strftime("%Y-%m-%d %H:%M") if log.date else "-"
+                qty_str = f"+{log.quantity}" if log.quantity > 0 else str(log.quantity)
+                self.view.admin_log_tree.insert("", "end", values=(log.id, date_str, log.transaction_type, part_name, qty_str,user_name))
 
     def storno_transaction(self):
         if self.main_app.current_user.role_id != ROLE_ADMIN:
@@ -231,6 +223,11 @@ class AdminController:
                     messagebox.showerror("Hiba", "Ezt a tételt már korábban stornózták!")
                     return
 
+                already_stornoed = session.query(TransactionLog).filter(TransactionLog.transaction_type == f"Stornó (#{log_entry.id})").first()
+                if already_stornoed:
+                    messagebox.showerror("Hiba", "Ezt a tételt már korábban stornózták!")
+                    return
+
                 part = session.query(Parts).filter(Parts.id == log_entry.part_id).with_for_update().first()
                 if not part:
                     messagebox.showerror("Hiba", "A kapcsolódó alkatrész nem található!")
@@ -246,7 +243,6 @@ class AdminController:
                     return
 
                 part.amount += reverse_qty
-                log_entry.transaction_type = f"{log_entry.transaction_type} [STORNÓZVA]"
 
                 if self.main_app.current_user:
                     admin_id = self.main_app.current_user.id
