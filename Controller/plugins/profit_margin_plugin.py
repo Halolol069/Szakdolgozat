@@ -57,11 +57,11 @@ def open_margin_window():
                 net = float(net_entry1.get())
                 marg = float(margin_entry1.get())
                 sell_price, profit = calculate_margin(net, marg)
-                res_price1.configure(text=f"Eladási ár: {sell_price:,.0f} Ft", text_color="white")
-                res_prof1.configure(text=f"Tiszta haszon: {profit:,.0f} Ft", text_color="white")
+                res_price1.configure(text=f"Eladási ár: {sell_price:,.0f} Ft", text_color=["black", "white"])
+                res_prof1.configure(text=f"Tiszta haszon: {profit:,.0f} Ft", text_color=["black", "white"])
             except ValueError:
                 res_price1.configure(text="Hibás szám!", text_color="red")
-                res_prof1.configure(text="")
+                res_prof1.configure(text="", text_color=["black", "white"])
 
         customtkinter.CTkButton(tabview.tab("Eladási ár számítás"), text="Kalkuláció", command=calc1).pack(pady=15)
         net_entry2 = customtkinter.CTkEntry(tabview.tab("Alkudozás (Visszaszámolás)"),placeholder_text="Beszerzési ár (Ft)...", width=200)
@@ -81,8 +81,8 @@ def open_margin_window():
                 net = float(net_entry2.get())
                 sell = float(sell_entry2.get())
                 marg, prof = calculate_reverse_margin(net, sell)
-                res_marg2.configure(text=f"Haszonkulcs: {marg:.2f} %", text_color="white")
-                res_prof2.configure(text=f"Tiszta haszon: {prof:,.0f} Ft", text_color="white")
+                res_marg2.configure(text=f"Haszonkulcs: {marg:.2f} %", text_color=["black", "white"])
+                res_prof2.configure(text=f"Tiszta haszon: {prof:,.0f} Ft", text_color=["black", "white"])
             except ValueError:
                 res_marg2.configure(text="Hibás szám!", text_color="red")
                 res_prof2.configure(text="")

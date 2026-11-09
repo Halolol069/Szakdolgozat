@@ -9,7 +9,7 @@ class LoginView(customtkinter.CTkFrame):
         self.title_label = customtkinter.CTkLabel(self.card,text="Bejelentkezés", font=customtkinter.CTkFont(size=24, weight="bold"))
         self.title_label.pack(padx=40, pady=(30, 5))
 
-        self.subtitle_label = customtkinter.CTkLabel(self.card,text="Készletgazdálkodási Rendszer", font=customtkinter.CTkFont(size=13), text_color="gray70")
+        self.subtitle_label = customtkinter.CTkLabel(self.card,text="Készletgazdálkodási Rendszer", font=customtkinter.CTkFont(size=13), text_color="gray")
         self.subtitle_label.pack(padx=40, pady=(0, 15))
 
         self.error_label = customtkinter.CTkLabel(self.card,text='')
@@ -33,8 +33,21 @@ class LoginView(customtkinter.CTkFrame):
         self.login_button = customtkinter.CTkButton(self.card,text="Belépés", height=40, font=customtkinter.CTkFont(size=14, weight="bold"))
         self.login_button.pack(padx=30, pady=(0,10), fill="x")
 
+        self.appearance_mode_optionmenu_label = customtkinter.CTkLabel(self.card, text="Megjelenítés:")
+        self.appearance_mode_optionmenu_label.pack(padx=30, pady=(0,25), anchor="w")
+
+        self.appearance_mode_optionmenu = customtkinter.CTkOptionMenu(self.card, values=["Világos", "Sötét"], command=self.change_appearance)
+        self.appearance_mode_optionmenu.pack(padx=30, pady=(0, 30), fill="x")
+        self.appearance_mode_optionmenu.set("Világos")
+
     def toggle_password(self):
         if self.show_password_checkbox.get() == 1:
             self.password.configure(show='')
         else:
             self.password.configure(show='*')
+
+    def change_appearance(self, new_appearance: str):
+        if new_appearance == "Sötét":
+            customtkinter.set_appearance_mode("Dark")
+        else:
+            customtkinter.set_appearance_mode("Light")

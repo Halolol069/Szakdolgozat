@@ -130,13 +130,6 @@ class PartsController:
             except Exception as e:
                 messagebox.showerror("Hiba",f"Hiba történt az adatbázis lekérdezéskor: {e} ")
 
-    def load_low_parts(self):
-        with Sessionlocal() as session:
-            try:
-                return session.query(Parts).filter(Parts.amount < Parts.min_amount).all()
-            except Exception as e:
-                messagebox.showerror("Hiba",f"Hiba történt az adatbázis lekérdezéskor: {e}")
-
     def open_add_popup(self):
         if hasattr(self, "add_view") and self.add_view.winfo_exists():
             self.add_view.focus()
@@ -424,27 +417,4 @@ class PartsController:
             except Exception as e:
                 session.rollback()
                 messagebox.showerror("Hiba",f"Hiba történt a törlés során: {e}")
-                return False
-
-    def part_indicator(self, part_id):
-        with Sessionlocal() as session:
-            try:
-                ninety_days_ago = date.today() - timedelta(days=90)
-                total_sold = session.query(func.sum(SellItem.amount)).join(SellHeader).filter(SellHeader.date >= ninety_days_ago,SellItem.part_id == part_id).scalar()
-                if total_sold is None:
-                    total_sold = 0
-                sold_per_day = total_sold / 90.0
-                min_sold =math.ceil(sold_per_day * 7)
-                max_sold = math.ceil(min_sold*13)
-                parts_to_update = session.query(Parts).filter(Parts.id == part_id).first()
-                if parts_to_update and total_sold > 0:
-                    parts_to_update.min_amount = min_sold
-                    parts_to_update.max_amount = max_sold
-                    session.commit()
-                    return True
-                else:
-                    return False
-            except Exception as e:
-                session.rollback()
-                messagebox.showerror("Hiba",f"Hiba történt a frissítés során: {e} ")
                 return False

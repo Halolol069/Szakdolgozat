@@ -81,38 +81,38 @@ def open_frame():
                 selected_type = type_dropdown.get()
                 if selected_type == "Coll -> Milliméter":
                     coll = calculate_mm(value)
-                    result_label.configure(text=f"Eredmény: {coll:.1f} mm")
+                    result_label.configure(text=f"Eredmény: {coll:.1f} mm", text_color=["black", "white"])
                 elif selected_type == "Milliméter -> Coll":
                     inch = calculate_inch(value)
-                    result_label.configure(text=f"Eredmény: {inch:.2f} coll")
+                    result_label.configure(text=f"Eredmény: {inch:.2f} coll", text_color=["black", "white"])
 
                 elif selected_type == "Gallon -> Liter":
                     gallon = calculate_liter(value)
-                    result_label.configure(text=f"Eredmény: {gallon:.1f} l")
+                    result_label.configure(text=f"Eredmény: {gallon:.1f} l", text_color=["black", "white"])
                 elif selected_type == "Liter -> Gallon":
                     gal = calculate_gallon(value)
-                    result_label.configure(text=f"Eredmény: {gal:.2f} gal")
+                    result_label.configure(text=f"Eredmény: {gal:.2f} gal", text_color=["black", "white"])
 
                 elif selected_type == "PSI -> Bar":
                     psi = calculate_bar(value)
-                    result_label.configure(text=f"Eredmény: {psi:.1f} bar")
+                    result_label.configure(text=f"Eredmény: {psi:.1f} bar", text_color=["black", "white"])
                 elif selected_type == "Bar -> PSI":
                     bar_res = calculate_psi(value)
-                    result_label.configure(text=f"Eredmény: {bar_res:.1f} PSI")
+                    result_label.configure(text=f"Eredmény: {bar_res:.1f} PSI", text_color=["black", "white"])
 
                 elif selected_type == "Lóerő -> Kilowatt":
                     hp = calculate_kw(value)
-                    result_label.configure(text=f"Eredmény: {hp:.1f} kW")
+                    result_label.configure(text=f"Eredmény: {hp:.1f} kW", text_color=["black", "white"])
                 elif selected_type == "Kilowatt -> Lóerő":
                     kw = calculate_hp(value)
-                    result_label.configure(text=f"Eredmény: {kw:.1f} LE")
+                    result_label.configure(text=f"Eredmény: {kw:.1f} LE", text_color=["black", "white"])
 
                 elif selected_type == "Font-láb -> Newtonméter":
                     lb = calculate_nm(value)
-                    result_label.configure(text=f"Eredmény: {lb:.1f} Nm")
+                    result_label.configure(text=f"Eredmény: {lb:.1f} Nm", text_color=["black", "white"])
                 elif selected_type == "Newtonméter -> Font-láb":
                     nm = calculate_lbft(value)
-                    result_label.configure(text=f"Eredmény: {nm:.1f} lb-ft")
+                    result_label.configure(text=f"Eredmény: {nm:.1f} lb-ft", text_color=["black", "white"])
 
             except ValueError:
                 result_label.configure(text="Hibás szám!", text_color="red")
