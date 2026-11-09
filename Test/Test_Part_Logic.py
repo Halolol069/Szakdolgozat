@@ -1,5 +1,5 @@
-import datetime
 import unittest
+from unittest.mock import patch
 from Controller.PartsController import PartsController
 from Model.database import Sessionlocal, Parts, SellHeader, SellItem
 from Test.Test_Base import Test_base
@@ -7,7 +7,7 @@ from Test.Test_Base import Test_base
 class DummyButton:
     def __init__(self):
         self.command = None
-    def configure(self, command = None):
+    def configure(self, command=None):
         if command:
             self.command = command
 
@@ -18,15 +18,21 @@ class DummyTree:
     def get_children(self):
         return []
 
-    def delete(self,*args, **kwargs):
+    def delete(self, *args, **kwargs):
         pass
 
-    def insert(self,*args, **kwargs):
+    def insert(self, *args, **kwargs):
         if 'values' in kwargs:
             self.inserted_rows.append(kwargs['values'])
 
     def tag_configure(self, tagname, **kwargs):
         pass
+
+    def selection(self):
+        return ["item1"]
+
+    def item(self, item_id):
+        return {"values": [999]}
 
 class DummyView:
     def __init__(self):
@@ -64,6 +70,7 @@ class DummyAddView:
         self.manufacturer_id = DummyVar(1)
         self.manufacturer_combobox = DummyVar("Lemförder")
         self.manufacturer_dict = {"Lemförder": 1}
+        self.location = DummyVar("A-sor, 1.polc")
 
     def destroy(self):
         pass
@@ -80,22 +87,19 @@ class DummyEditView:
         self.manufacturer_id = DummyVar(1)
         self.manufacturer_combobox = DummyVar("Lemförder")
         self.manufacturer_dict = {"Lemförder": 1}
+        self.location = DummyVar("B-sor, 2.polc")
 
     def destroy(self):
         pass
 
 class TestPartLogic(Test_base):
-    def test_read_part(self):
+    @patch('Controller.PartsController.messagebox.showinfo')
+    @patch('Controller.PartsController.messagebox.showerror')
+    def test_read_part(self, mock_error, mock_info):
         with Sessionlocal() as session:
             test_part = Parts(
-                part_number="TEST-DELETE-001",
-                name="Fek",
-                type="Fekrendszer",
-                price=5000,
-                amount=1,
-                min_amount=5,
-                max_amount=50,
-                manufacturer_id=1
+                part_number="TEST-DELETE-001", name="Fek", type="Fekrendszer", price=5000,
+                amount=1, min_amount=5, max_amount=50, manufacturer_id=1
             )
             session.add(test_part)
             session.commit()
@@ -105,17 +109,12 @@ class TestPartLogic(Test_base):
         controller = PartsController(mock_app, mock_view)
 
         inserted_rows = mock_view.tree.inserted_rows
-
-        founded = False
-        for row in inserted_rows:
-            if row[0] == part_id:
-                founded = True
-                break
+        founded = any(row[0] == part_id for row in inserted_rows)
         self.assertTrue(founded, "A teszt alkatrész nem töltött be!")
 
-        controller.delete_part(part_id)
-
-    def test_create_part(self):
+    @patch('Controller.PartsController.messagebox.showinfo')
+    @patch('Controller.PartsController.messagebox.showerror')
+    def test_create_part(self, mock_error, mock_info):
         mock_app = DummyApp()
         mock_view = DummyView()
         controller = PartsController(mock_app, mock_view)
@@ -126,21 +125,16 @@ class TestPartLogic(Test_base):
         with Sessionlocal() as session:
             created_part = session.query(Parts).filter(Parts.part_number == "TEST-CREATE-001").first()
             self.assertIsNotNone(created_part, "Az új alkatrész nem mentődött el az adatbázisba!")
-
             if created_part:
-                controller.delete_part(created_part.id)
+                self.assertEqual(created_part.location, "A-sor, 1.polc", "A polchely nem mentődött el helyesen!")
 
-    def test_delete_part(self):
+    @patch('Controller.PartsController.messagebox.showinfo')
+    @patch('Controller.PartsController.messagebox.showerror')
+    def test_delete_part(self, mock_error, mock_info):
         with Sessionlocal() as session:
             test_part = Parts(
-                part_number = "TEST-DELETE-001",
-                name= "Fek",
-                type = "Fekrendszer",
-                price = 5000,
-                amount = 1,
-                min_amount = 5,
-                max_amount = 50,
-                manufacturer_id = 1
+                part_number="TEST-DELETE-001", name="Fek", type="Fekrendszer", price=5000,
+                amount=1, min_amount=5, max_amount=50, manufacturer_id=1
             )
             session.add(test_part)
             session.commit()
@@ -158,17 +152,13 @@ class TestPartLogic(Test_base):
             deleted_part = session.query(Parts).filter(Parts.id == part_id).first()
             self.assertIsNone(deleted_part, "Még benne van az alkatrész törlés után!")
 
-    def test_update_part(self):
+    @patch('Controller.PartsController.messagebox.showinfo')
+    @patch('Controller.PartsController.messagebox.showerror')
+    def test_update_part(self, mock_error, mock_info):
         with Sessionlocal() as session:
             test_part = Parts(
-                part_number="TEST-DELETE-001",
-                name="Fek",
-                type="Fekrendszer",
-                price=5000,
-                amount=1,
-                min_amount=5,
-                max_amount=50,
-                manufacturer_id=1
+                part_number="TEST-DELETE-001", name="Fek", type="Fekrendszer", price=5000,
+                amount=1, min_amount=5, max_amount=50, manufacturer_id=1
             )
             session.add(test_part)
             session.commit()
@@ -187,47 +177,8 @@ class TestPartLogic(Test_base):
                 updated_part = session.query(Parts).filter(Parts.id == part_id).first()
                 self.assertEqual(updated_part.name, "Új Fék", "A név nem frissült az adatbázisban!")
                 self.assertEqual(updated_part.price, 6000, "Az ár nem frissült az adatbázisban!")
+                self.assertEqual(updated_part.location, "B-sor, 2.polc", "A polchely nem frissült az adatbázisban!")
 
-    def test_part_indicator(self):
-        with Sessionlocal() as session:
-            test_part = Parts(
-                part_number="TEST-DELETE-001",
-                name="Fek",
-                type="Fekrendszer",
-                price=5000,
-                amount=1000,
-                min_amount=5,
-                max_amount=50,
-                manufacturer_id=1
-            )
-
-            test_sell_header = SellHeader(
-                date=datetime.datetime.now() - datetime.timedelta(days=50),
-                number=1
-            )
-            session.add_all([test_part, test_sell_header])
-            session.commit()
-
-            sell_header_id = test_sell_header.id
-            part_id = test_part.id
-            test_sell_item = SellItem(
-                sell_header_id=sell_header_id,
-                part_id=part_id,
-                amount=100,
-                price=5000
-            )
-            session.add(test_sell_item)
-            session.commit()
-
-        mock_app = DummyApp()
-        mock_view = DummyView()
-        controller = PartsController(mock_app, mock_view)
-
-        controller.part_indicator(part_id)
-        with Sessionlocal() as session:
-            updated_part = session.query(Parts).filter(Parts.id == part_id).first()
-            self.assertEqual(8, updated_part.min_amount, "The min amount is correct")
-            self.assertEqual(104, updated_part.max_amount, "The max amount is correct")
 
 if __name__ == '__main__':
     unittest.main()

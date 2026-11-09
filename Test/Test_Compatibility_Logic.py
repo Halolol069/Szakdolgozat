@@ -10,7 +10,7 @@ from datetime import date
 class DummyDropDown:
     def __init__(self):
         self.command = None
-    def configure(self, command = None, **kwargs):
+    def configure(self, command=None, **kwargs):
         if command:
             self.command = command
 
@@ -21,10 +21,10 @@ class DummyTree:
     def selection(self):
         return ["Test_Part_ID"]
 
-    def item(self, part_id, option ):
+    def item(self, part_id, option):
         return ["TestFek", "TestMotor", "TestLampa"]
 
-    def  selection_remove(self,*args):
+    def selection_remove(self, *args):
         for item_id in args:
             self.removed_item.append(item_id)
             pass
@@ -32,10 +32,10 @@ class DummyTree:
     def get_children(self):
         return []
 
-    def delete(self,item):
+    def delete(self, item):
         pass
 
-    def insert(self, parent, index, values):
+    def insert(self, parent, index, values, iid=None):
         self.inserted_items.append(values)
 
 class DummyVar:
@@ -46,10 +46,10 @@ class DummyVar:
     def get(self):
         return self.value
 
-    def set(self,value):
+    def set(self, value):
         self.value = value
 
-    def configure(self, values = None, command = None):
+    def configure(self, values=None, command=None):
         if values is not None:
             self.values = values
 
@@ -58,7 +58,7 @@ class DummyView:
         self.vehiclebrand_dropdown = DummyVar("VehicleBrand")
         self.vehicletype_dropdown = DummyVar("Jármű Típus")
         self.model_dropdown = DummyVar("Model")
-        self.engine_dropdown = DummyVar("Engine")
+        self.engine_dropdown = DummyVar("[4454] Engine | 2000ccm, 150LE")  # Frissített alapérték a helyes formátumra
         self.save_button = DummyDropDown()
         self.save_button_label = DummyDropDown()
         self.search_button = DummyDropDown()
@@ -75,32 +75,44 @@ class MockController:
     def __init__(self):
         self.received_engine = None
 
-    def gets_parts_by_engine(self,engine_id):
+    def gets_parts_by_engine(self, engine_id):
         self.received_engine = engine_id
 
 class Test_Compatibility_Logic(Test_base):
-    def test_save_compatibility(self):
+    @patch('Controller.CompatibilityController.messagebox.showwarning')
+    @patch('Controller.CompatibilityController.messagebox.showerror')
+    def test_save_compatibility(self, mock_error, mock_warning):
         with Sessionlocal() as session:
             test_type = VehicleType(id=1, name="Személyautó")
             test_vehiclebrand = VehicleBrand(id=4451, name="Lexus", country="USA")
             test_part = Parts(id=4452, name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék', price=210,
                               amount=1, min_amount=1, max_amount=10)
-            test_model = Modell(id=4453, name='Model', vehicleBrand_id=4451, generation=5, date=date(2021,6,1))
+            test_model = Modell(id=4453, name='Model', vehicleBrand_id=4451, generation=5, date=date(2021, 6, 1))
             test_engine = Engine(id=4454, engine_code='Engine', vehicleBrand_id=4451, horse_power=150, ccc=2000,
                                  fuel_id=1)
             test_vehicle = Vehicle(id=1, vehicle_type_id=1, modell_id=4453)
-            session.add_all([test_type,test_vehiclebrand, test_part, test_model, test_engine,test_vehicle])
+            session.add_all([test_type, test_vehiclebrand, test_part, test_model, test_engine, test_vehicle])
             session.commit()
 
             mock_app = DummyApp()
             mock_view = DummyView()
+            mock_view.engine_dropdown.set("[4454] Engine | 2000ccm, 150LE")
+            mock_view.parts_tree.selection = lambda: ["4452"]
+
             controller = CompatibilityController(mock_app, mock_view)
 
             controller.save_compatibility()
 
-            self.assertIn("Test_Part_ID", mock_view.parts_tree.removed_item, "The selection was not removed from the table after saving the compatibility!")
+            self.assertIn("4452", mock_view.parts_tree.removed_item,
+                          "A kompatibilitás mentése után a kijelölés nem törlődött!")
 
-    def test_delete_compatibility(self):
+        with Sessionlocal() as s:
+            self.assertIsNotNone(s.query(Compatibility).filter_by(
+                part_id=4452, modell_id=4453, engine_id=4454).first())
+
+    @patch('Controller.CompatibilityController.messagebox.showwarning')
+    @patch('Controller.CompatibilityController.messagebox.showerror')
+    def test_delete_compatibility(self, mock_error, mock_warning):
         with Sessionlocal() as session:
             test_type = VehicleType(id=1, name="Személyautó")
             test_vehiclebrand = VehicleBrand(id=6661, name="Audi", country="Germany")
@@ -112,18 +124,26 @@ class Test_Compatibility_Logic(Test_base):
             test_vehicle = Vehicle(id=1, vehicle_type_id=1, modell_id=6663)
             test_compat = Compatibility(part_id=6662, modell_id=6663, engine_id=6664)
 
-            session.add_all([test_type, test_vehiclebrand, test_part, test_model, test_engine, test_vehicle, test_compat])
+            session.add_all(
+                [test_type, test_vehiclebrand, test_part, test_model, test_engine, test_vehicle, test_compat])
             session.commit()
 
             mock_app = DummyApp()
             mock_view = DummyView()
+            mock_view.engine_dropdown.set("[6664] Engine | 2000ccm, 150LE")
+            mock_view.parts_tree.selection = lambda: ["6662"]
+
             controller = CompatibilityController(mock_app, mock_view)
             controller.delete_compatibility()
-            deleted_compat = session.query(Compatibility).filter_by(part_id=6662, modell_id=6663,engine_id=6664).first()
+
+            deleted_compat = session.query(Compatibility).filter_by(part_id=6662, modell_id=6663,
+                                                                    engine_id=6664).first()
             self.assertIsNone(deleted_compat, "A kompatibilitás hozzárendelés nem törlődött az adatbázisból!")
-    def test_load_all_parts(self):
+
+    @patch('Controller.CompatibilityController.messagebox.showerror')
+    def test_load_all_parts(self, mock_error):
         with Sessionlocal() as session:
-            test_part = Parts(id=3332,name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék', price=210,
+            test_part = Parts(id=3332, name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék', price=210,
                               amount=1, min_amount=1, max_amount=10)
             session.add(test_part)
             session.commit()
@@ -142,9 +162,9 @@ class Test_Compatibility_Logic(Test_base):
             test_vehiclebrand = VehicleBrand(id=8881, name="Pontiac", country="USA")
             test_engine = Engine(id=8882, engine_code='Engine', vehicleBrand_id=8881, horse_power=150, ccc=2000,
                                  fuel_id=1)
-            test_model = Modell(id=8883, name='FireBird', vehicleBrand_id=8881, generation=5, date=date(2021,6,1))
+            test_model = Modell(id=8883, name='FireBird', vehicleBrand_id=8881, generation=5, date=date(2021, 6, 1))
             test_motorCompatibility = MotorCompatibility(modell_id=8883, engine_id=8882)
-            session.add_all([test_model,test_engine, test_vehiclebrand, test_motorCompatibility])
+            session.add_all([test_model, test_engine, test_vehiclebrand, test_motorCompatibility])
             session.commit()
 
             mock_app = DummyApp()
@@ -152,17 +172,17 @@ class Test_Compatibility_Logic(Test_base):
             controller = CompatibilityController(mock_app, mock_view)
 
             controller.load_engines('FireBird')
-            expected_engine_string = "Engine | 2000ccm, 150LE"
+            expected_engine_string = "[8882] Engine | 2000ccm, 150LE"
             self.assertIn(expected_engine_string, mock_view.engine_dropdown.values, "A motor nem töltődött be a legördülőbe!")
 
     def test_load_models(self):
         with Sessionlocal() as session:
             test_type = VehicleType(id=1, name="Személyautó")
             test_vehicleBrand = VehicleBrand(id=5551, name="Chevy", country="USA")
-            test_manufacturer = Manufacturer(id=9992,name="Bosch")
-            test_models = Modell(id=9993, name='Model', vehicleBrand_id=5551, generation=5, date=date(2021,6,1))
+            test_manufacturer = Manufacturer(id=9992, name="Bosch")
+            test_models = Modell(id=9993, name='Model', vehicleBrand_id=5551, generation=5, date=date(2021, 6, 1))
             test_vehicle = Vehicle(id=1, vehicle_type_id=1, modell_id=9993)
-            session.add_all([test_type,test_models, test_vehicleBrand, test_manufacturer,test_vehicle])
+            session.add_all([test_type, test_models, test_vehicleBrand, test_manufacturer, test_vehicle])
             session.commit()
 
             mock_app = DummyApp()
@@ -181,7 +201,7 @@ class Test_Compatibility_Logic(Test_base):
             test_vehicleBrand = VehicleBrand(id=5551, name="Chevy", country='USA')
             test_model = Modell(id=9999, name="TesztModell", vehicleBrand_id=5551, generation=1, date=date(2021, 6, 1))
             test_vehicle = Vehicle(id=1, vehicle_type_id=1, modell_id=9999)
-            session.add_all([test_type,test_vehicleBrand,test_model,test_vehicle])
+            session.add_all([test_type, test_vehicleBrand, test_model, test_vehicle])
             session.commit()
 
             mock_app = DummyApp()
@@ -194,13 +214,11 @@ class Test_Compatibility_Logic(Test_base):
 
     def test_search_parts_by_engines(self):
         with Sessionlocal() as session:
-            test_parts = Parts(id=5551, name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék', price=210,
-                              amount=1, min_amount=1, max_amount=10)
-            test_engines = Engine(id=5552, engine_code='Engine', vehicleBrand_id=5556, horse_power=150, ccc=2000,
-                                 fuel_id=1)
-            test_modell = Modell (id=5555, name='Model', vehicleBrand_id=5556, generation=5, date=date(2021,6,1))
+            test_parts = Parts(id=5551, name='TestFek', manufacturer_id=1, part_number='T-Leg-01', type='Fék',price=210,amount=1, min_amount=1, max_amount=10)
+            test_engines = Engine(id=5552, engine_code='Engine', vehicleBrand_id=5556, horse_power=150, ccc=2000,fuel_id=1)
+            test_modell = Modell(id=5555, name='Model', vehicleBrand_id=5556, generation=5, date=date(2021, 6, 1))
             test_vehicleBrand = VehicleBrand(id=5556, name='Chevy', country='USA')
-            test_compatibility = Compatibility(id=5553, part_id=5551, modell_id = 5555, engine_id = 5552)
+            test_compatibility = Compatibility(id=5553, part_id=5551, modell_id=5555, engine_id=5552)
             session.add_all([test_parts, test_engines, test_modell, test_vehicleBrand, test_compatibility])
             session.commit()
 
@@ -208,20 +226,21 @@ class Test_Compatibility_Logic(Test_base):
             mock_view = DummyView()
             controller = CompatibilityController(mock_app, mock_view)
 
-            search_parts = controller.gets_parts_by_engine("Engine")
+            search_parts = controller.gets_parts_by_engine("[5552] Engine | 2000ccm, 150LE")
             parts_list = [names.name for names in search_parts]
             self.assertIn('TestFek', parts_list, "Parts founded")
 
     def test_search_actions(self):
         mock_controller = MockController()
 
-        real_view = CompatibilityView(master = None)
+        real_view = CompatibilityView(master=None)
         real_view.controller = mock_controller
 
-        real_view.engine_dropdown.set(value="coyote v8")
+        real_view.engine_dropdown.set(value="[1] coyote v8 | 5000ccm, 500LE")
         real_view.search_action()
 
-        self.assertEqual("coyote v8", mock_controller.received_engine , "The engine code is not same")
+        self.assertEqual("[1] coyote v8 | 5000ccm, 500LE", mock_controller.received_engine,
+                         "The engine code is not same")
 
     def test_search_update_table(self):
         with Sessionlocal() as session:
@@ -230,7 +249,7 @@ class Test_Compatibility_Logic(Test_base):
                                amount=1, min_amount=1, max_amount=10)
             test_engines = Engine(id=5552, engine_code='coyote v8', vehicleBrand_id=5556, horse_power=150, ccc=2000,
                                   fuel_id=1)
-            test_modell = Modell(id=5555, name='Model', vehicleBrand_id=5556, generation=5, date=date(2021,6,1))
+            test_modell = Modell(id=5555, name='Model', vehicleBrand_id=5556, generation=5, date=date(2021, 6, 1))
             test_vehicleBrand = VehicleBrand(id=5556, name='Chevy', country='USA')
             test_compatibility = Compatibility(id=5553, part_id=5551, modell_id=5555, engine_id=5552)
             session.add_all([test_parts, test_engines, test_modell, test_vehicleBrand, test_compatibility])
@@ -241,7 +260,7 @@ class Test_Compatibility_Logic(Test_base):
             controller = CompatibilityController(mock_app, mock_view)
 
             mock_view.parts_tree.inserted_items.clear()
-            controller.gets_parts_by_engine("coyote v8")
+            controller.gets_parts_by_engine("[5552] coyote v8 | 2000ccm, 150LE")
             inserted_names = [item[0] for item in mock_view.parts_tree.inserted_items]
             self.assertIn("TestFek", inserted_names, "Az alkatrész nem töltődött be a táblázatba!")
 
@@ -249,11 +268,11 @@ class Test_Compatibility_Logic(Test_base):
         mock_app = DummyApp()
         mock_view = DummyView()
         controller = CompatibilityController(mock_app, mock_view)
-        controller.gets_parts_by_engine("EZNEMMOTOR")
-        self.assertEqual(True,mock_view.msgbox_called, "The messagebox appeared")
+        controller.gets_parts_by_engine("[9999] NEMLETEZOMOTOR | 1000ccm, 100LE")
+        self.assertEqual(True, mock_view.msgbox_called, "The messagebox appeared")
 
     @patch('View.CompatibilityView.messagebox.showerror')
-    def test_search_empty(self,mock_showerror):
+    def test_search_empty(self, mock_showerror):
         mock_controller = MockController()
 
         real_view = CompatibilityView(master=None)
@@ -262,4 +281,30 @@ class Test_Compatibility_Logic(Test_base):
         real_view.engine_dropdown.set(value="")
         real_view.search_action()
         self.assertTrue(mock_showerror.called, "The messagebox appeared")
-        self.assertEqual(None,mock_controller.received_engine, "No parts for the engine" )
+        self.assertEqual(None, mock_controller.received_engine, "No parts for the engine")
+
+    def test_same_name_engines_are_separate(self):
+        with Sessionlocal() as session:
+            session.add_all([
+                VehicleBrand(id=1, name="VW", country="DE"),
+                Modell(id=1, name="Golf", vehicleBrand_id=1, generation=7, date=date(2012, 1, 1)),
+                Engine(id=1, engine_code="2.0 TDI", vehicleBrand_id=1, horse_power=150, ccc=1968, fuel_id=1),
+                Engine(id=2, engine_code="2.0 TDI", vehicleBrand_id=1, horse_power=190, ccc=1968, fuel_id=1),
+                MotorCompatibility(modell_id=1, engine_id=1),
+                MotorCompatibility(modell_id=1, engine_id=2),
+                Parts(id=1, name="Fékbetét", manufacturer_id=1, part_number="X-1", type="Fék",
+                      price=1000, amount=1, min_amount=1, max_amount=2),
+                Compatibility(part_id=1, modell_id=1, engine_id=2),
+            ])
+            session.commit()
+
+        view = DummyView()
+        view.model_dropdown.set("Golf")
+        controller = CompatibilityController(DummyApp(), view)
+
+        parts_190 = controller.gets_parts_by_engine("[2] 2.0 TDI | 1968ccm, 190LE")
+        self.assertEqual(1, len(parts_190))
+
+        view.msgbox_called = False
+        controller.gets_parts_by_engine("[1] 2.0 TDI | 1968ccm, 150LE")
+        self.assertTrue(view.msgbox_called, "A 150 LE-s motorhoz nem tartozhat alkatrész!")
