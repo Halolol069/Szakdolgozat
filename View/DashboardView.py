@@ -45,7 +45,6 @@ class DashboardView(customtkinter.CTkFrame):
 
         self.appearance_mode_optionmenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Világos","Sötét"], command=self.change_appearence)
         self.appearance_mode_optionmenu.grid(row=13, column=0, padx=20, pady=(10, 20))
-        self.appearance_mode_optionmenu.set("Világos")
 
         self.logout_button = customtkinter.CTkButton(self.sidebar_frame, text="Kijelentkezés",
                                                      fg_color="red", hover_color="darkred")
