@@ -38,7 +38,6 @@ class LoginView(customtkinter.CTkFrame):
 
         self.appearance_mode_optionmenu = customtkinter.CTkOptionMenu(self.card, values=["Világos", "Sötét"], command=self.change_appearance)
         self.appearance_mode_optionmenu.pack(padx=30, pady=(0, 30), fill="x")
-        self.appearance_mode_optionmenu.set("Világos")
 
     def toggle_password(self):
         if self.show_password_checkbox.get() == 1:

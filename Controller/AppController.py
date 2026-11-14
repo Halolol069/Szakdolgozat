@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import customtkinter
+
 import View.MainView as MainView
 import View.LoginView as LoginView
 import View.DashboardView as DashboardView
@@ -23,12 +25,22 @@ class Controller:
 
     def show_login(self):
         self.current_user = None
+        if customtkinter.get_appearance_mode() == "Dark":
+            current_mode = "Sötét"
+        else:
+            current_mode = "Világos"
+        self.login.appearance_mode_optionmenu.set(current_mode)
         self.app.show_frame(self.login)
 
     def show_dashboard(self):
         if self.current_user is None:
             self.show_login()
             return
+        if customtkinter.get_appearance_mode() == "Dark":
+            current_mode = "Sötét"
+        else:
+            current_mode = "Világos"
+        self.dashboard.appearance_mode_optionmenu.set(current_mode)
         self.app.show_frame(self.dashboard)
         if self.current_user.role_id == ROLE_ADMIN:
             self.dashboard.compatibility_button.grid(row=3, column=0, padx=20, pady=10)
