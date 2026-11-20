@@ -1,18 +1,15 @@
-import math
 import os
 import shutil
-from datetime import date, timedelta
 from tkinter import filedialog, messagebox
 
 import customtkinter
 from PIL import Image
-from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
-from Model.database import Parts, Sessionlocal, SellItem, SellHeader, Manufacturer, ROLE_ADMIN
+from Model.database import Parts, Sessionlocal, Manufacturer, ROLE_ADMIN
 from View.AddPartView import AddPartView
 from View.EditPartView import EditPartView
-
+from Controller.permissions import require_admin
 
 class PartsController:
     def __init__(self, main_app, view):
@@ -114,7 +111,8 @@ class PartsController:
                 if search_term:
                     query = query.filter(
                         (Parts.name.ilike(f"%{search_term}%")) |
-                        (Parts.part_number.ilike(f"%{search_term}%"))
+                        (Parts.part_number.ilike(f"%{search_term}%")) |
+                        (Parts.type.ilike(f"%{search_term}%"))
                     )
                 parts_list = query.order_by(Parts.id).all()
                 for part in parts_list:
@@ -130,21 +128,29 @@ class PartsController:
             except Exception as e:
                 messagebox.showerror("Hiba",f"Hiba történt az adatbázis lekérdezéskor: {e} ")
 
+    def get_part_types(self):
+        with Sessionlocal() as session:
+            types = session.query(Parts.type).distinct().all()
+            return sorted(t[0] for t in types if t[0])
+
     def open_add_popup(self):
         if hasattr(self, "add_view") and self.add_view.winfo_exists():
-            self.add_view.focus()
+            self.add_view.lift()
             return
 
         man_dict = self.get_manufacturer_dict()
 
         self.add_view = AddPartView(self.view, man_dict)
-        self.add_view.grab_set()
+        self.add_view.type.configure(values=self.get_part_types())
+        self.add_view.after(100, self.add_view.lift)
 
         self.current_add_image_path = None
         self.add_view.upload_button.configure(command=self.upload_add_image)
         self.add_view.save_button.configure(command=self.save_part)
 
     def save_part(self):
+        if not require_admin(self.main_app, parent=self.add_view):
+            return
         part_num = self.add_view.part_number.get()
         name = self.add_view.name.get()
         part_type = self.add_view.type.get()
@@ -152,7 +158,11 @@ class PartsController:
         selected_man_name = self.add_view.manufacturer_combobox.get()
         man_id = self.add_view.manufacturer_dict.get(selected_man_name)
         if not man_id:
-            messagebox.showerror("Hiba", "Kérlek, válassz egy érvényes gyártót a listából!")
+            messagebox.showerror("Hiba", "Kérlek, válassz egy érvényes gyártót a listából!", parent=self.add_view)
+            return
+
+        if part_type.strip().isdigit():
+            messagebox.showwarning("Hiba", "A típus nem lehet csak szám!", parent=self.add_view)
             return
 
         try:
@@ -163,15 +173,19 @@ class PartsController:
             location_val = self.add_view.location.get()
 
         except ValueError:
-            messagebox.showwarning("Hiba", "Az ár, készlet és gyártó ID mezőkbe csak számot írhatsz!")
+            messagebox.showwarning("Hiba", "Az ár, a készlet, a minimum és a maximum mezőkbe csak számot írhatsz!", parent=self.add_view)
             return
 
         if not part_num or not name or not part_type:
-            messagebox.showwarning("Figyelmeztetés","Kérlek tölts ki minden mezőt!")
+            messagebox.showwarning("Figyelmeztetés","Kérlek tölts ki minden mezőt!", parent=self.add_view)
             return
 
         if min(price, amount, min_amount, max_amount) < 0:
-            messagebox.showwarning("Hiba", "Negatív érték nem adható meg!")
+            messagebox.showwarning("Hiba", "Negatív érték nem adható meg!", parent=self.add_view)
+            return
+
+        if min_amount > max_amount:
+            messagebox.showwarning("Hiba", "A minimum mennyiség nem lehet nagyobb a maximumnál!", parent=self.add_view)
             return
 
         new_parts = Parts(
@@ -191,16 +205,16 @@ class PartsController:
             try:
                 session.add(new_parts)
                 session.commit()
-                messagebox.showinfo("Siker","Sikeresen mentés")
+                messagebox.showinfo("Siker","Sikeres mentés", parent=self.add_view)
                 self.add_view.destroy()
                 self.load_parts()
             except Exception as e:
                 session.rollback()
-                messagebox.showerror("Hiba",f"Hiba történt mentés közben: {e}")
+                messagebox.showerror("Hiba",f"Hiba történt mentés közben: {e}", parent=self.add_view)
 
     def upload_image(self):
         filepath = filedialog.askopenfilename(
-            title="Válasz egy képet",
+            title="Válassz egy képet",
             filetypes=[("Képfájlok", "*.png *.jpg *.jpeg")]
         )
 
@@ -247,8 +261,9 @@ class PartsController:
         self.current_add_image_path = destination
 
     def open_edit_popup(self):
-        if hasattr(self,"edit_view") and self.edit_view.winfo_exists():
-            self.edit_view.focus()
+        if hasattr(self, "edit_view") and self.edit_view.winfo_exists():
+            self.edit_view.lift()
+            messagebox.showwarning("Figyelem", "Már nyitva van egy alkatrész szerkesztése. Előbb mentsd vagy zárd be, utána választhatsz másikat! ")
             return
 
         choosed_line = self.view.tree.selection()
@@ -274,18 +289,26 @@ class PartsController:
             man_dict = self.get_manufacturer_dict()
 
             self.edit_view = EditPartView(self.view, man_dict)
-            self.edit_view.grab_set()
+            self.edit_view.title(f"Alkatrész szerkesztése – {part_to_edit.part_number}")
+            self.edit_view.type.configure(values=self.get_part_types())
+            self.edit_view.after(100, self.edit_view.lift)
             self.edit_view.part_number.insert(0, part_to_edit.part_number)
             self.edit_view.name.insert(0, part_to_edit.name)
-            self.edit_view.type.insert(0, part_to_edit.type)
+            self.edit_view.type.set(part_to_edit.type or "")
             self.edit_view.price.insert(0, str(part_to_edit.price))
             self.edit_view.amount.insert(0, str(part_to_edit.amount))
+            self.edit_view.amount.configure(
+                state="disabled",
+                fg_color=("gray80", "gray25"),
+                text_color=("gray40", "gray60"),
+                border_color=("gray70", "gray30")
+            )
             self.edit_view.min_amount.insert(0, str(part_to_edit.min_amount))
             self.edit_view.max_amount.insert(0,str(part_to_edit.max_amount))
             if part_to_edit.location:
                 self.edit_view.location.insert(0, part_to_edit.location)
             self.current_image_path = part_to_edit.image_path
-            current_man_name = "Válasz egy gyártót..."
+            current_man_name = "Válassz egy gyártót..."
             for name, man_id in man_dict.items():
                 if man_id == part_to_edit.manufacturer_id:
                     current_man_name = name
@@ -303,6 +326,8 @@ class PartsController:
             self.edit_view.save_button.configure(command=self.save_edited_part)
 
     def save_edited_part(self):
+        if not require_admin(self.main_app, parent=self.edit_view):
+            return
         part_num = self.edit_view.part_number.get()
         name = self.edit_view.name.get()
         part_type = self.edit_view.type.get()
@@ -311,27 +336,30 @@ class PartsController:
         location_val = self.edit_view.location.get()
 
         if not man_id:
-            messagebox.showerror("Hiba", "Kérlek, válassz egy érvényes gyártót a listából!")
+            messagebox.showerror("Hiba", "Kérlek, válassz egy érvényes gyártót a listából!", parent=self.edit_view)
+            return
+        if part_type.strip().isdigit():
+            messagebox.showwarning("Hiba", "A típus nem lehet csak szám!", parent=self.edit_view)
             return
         try:
             price = int(self.edit_view.price.get())
-            amount = int(self.edit_view.amount.get())
             min_amount = int(self.edit_view.min_amount.get())
             max_amount = int(self.edit_view.max_amount.get())
 
-            if min(price, amount, min_amount, max_amount) < 0:
-                messagebox.showwarning("Hiba", "Negatív érték nem adható meg!")
+            if min(price, min_amount, max_amount) < 0:
+                messagebox.showwarning("Hiba", "Negatív érték nem adható meg!", parent=self.edit_view)
                 return
 
-            if not man_id:
-                messagebox.showerror("Hiba","Érvénytelen gyártó!")
+            if min_amount > max_amount:
+                messagebox.showwarning("Hiba", "A minimum mennyiség nem lehet nagyobb a maximumnál!", parent=self.edit_view)
                 return
+
         except ValueError:
-            messagebox.showwarning("Figyelem","Az ár, készlet és gyártó ID mezőkbe csak számot írhatsz!")
+            messagebox.showwarning("Figyelem","Az ár, a minimum és a maximum mezőbe csak számot írhatsz!", parent=self.edit_view)
             return
 
         if not part_num or not name or not part_type:
-            messagebox.showwarning("Figyelem","Kérlek tölts ki minden mezőt!")
+            messagebox.showwarning("Figyelem","Kérlek tölts ki minden mezőt!", parent=self.edit_view)
             return
 
         new_data = {
@@ -339,7 +367,6 @@ class PartsController:
             "name": name,
             "type": part_type,
             "price": price,
-            "amount": amount,
             "min_amount":min_amount,
             "max_amount":max_amount,
             "manufacturer_id": man_id,
@@ -348,7 +375,7 @@ class PartsController:
         }
 
         if self.update_part(self.selected_edit_id, new_data):
-            messagebox.showinfo("Siker","Sikeresen módosítottad az alkatrészt!")
+            messagebox.showinfo("Siker","Sikeresen módosítottad az alkatrészt!", parent=self.edit_view)
             self.edit_view.destroy()
             self.load_parts()
 
@@ -362,7 +389,6 @@ class PartsController:
                     part_to_update.name = new_data['name']
                     part_to_update.type = new_data['type']
                     part_to_update.price = new_data['price']
-                    part_to_update.amount = new_data['amount']
                     part_to_update.min_amount = new_data['min_amount']
                     part_to_update.max_amount = new_data['max_amount']
                     part_to_update.manufacturer_id = new_data['manufacturer_id']
@@ -374,7 +400,7 @@ class PartsController:
                     return False
             except Exception as e:
                 session.rollback()
-                messagebox.showerror("Hiba",f"Hiba történt a frissítés során: {e}")
+                messagebox.showerror("Hiba",f"Hiba történt a frissítés során: {e}", parent=self.edit_view)
                 return False
 
     def delete_selected_part(self):
@@ -398,8 +424,10 @@ class PartsController:
             self.load_parts()
 
     def delete_part(self, part_id):
-        if self.main_app.current_user.role_id != ROLE_ADMIN:
-            messagebox.showerror("Hiba", "Nincs jogosultságod alkatrészt törölni!")
+        if not require_admin(self.main_app):
+            return False
+        if hasattr(self, "edit_view") and self.edit_view.winfo_exists() and self.selected_edit_id == part_id:
+            messagebox.showwarning("Figyelem", "Ez az alkatrész éppen szerkesztés alatt áll, előbb zárd be a szerkesztő ablakot!")
             return False
         with Sessionlocal() as session:
             try:

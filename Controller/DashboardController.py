@@ -13,12 +13,15 @@ import customtkinter
 import View.CompatibilityView as CompatibilitiesView
 from Controller import CompatibilityController as CompatibilitiesController
 from Controller.AdminController import AdminController
-from Model.database import Parts, Sessionlocal, SellItem, SellHeader, ROLE_ADMIN
+from Controller.permissions import require_admin
+from Model.database import Parts, Sessionlocal, SellItem, SellHeader
 from View.AdminView import AdminView
 from View.TransactionView import TransactionView
 
 import matplotlib.pyplot as plt
+from pathlib import Path
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 
 class DashboardController:
 
@@ -55,11 +58,15 @@ class DashboardController:
             self.main_app, transaction_view)
 
     def logout(self):
+        for window in self.main_app.app.winfo_children():
+            if isinstance(window, customtkinter.CTkToplevel):
+                window.destroy()
         self.back()
         self.main_app.login.username.delete(0, "end")
         self.main_app.login.password.delete(0, "end")
         self.main_app.login.error_label.configure(text="", fg_color="transparent")
         self.main_app.login.password.configure(show="*")
+        self.main_app.login.show_password_checkbox.deselect()
         self.main_app.show_login()
 
     def show_parts(self):
@@ -106,9 +113,7 @@ class DashboardController:
         self.load_dashboard_stats()
 
     def show_compatibility(self):
-        user = self.main_app.current_user
-        if user is None or user.role_id != ROLE_ADMIN:
-            messagebox.showerror("Hiba", "Ehhez nincs jogosultságod!")
+        if not require_admin(self.main_app):
             return
         self.clear_main_frame()
         compatibility_view = CompatibilitiesView.CompatibilityView(self.view.main_frame)
@@ -117,10 +122,11 @@ class DashboardController:
 
     def check_inventory_alerts(self):
         missing_parts = self.low_stock()
-        if missing_parts:
+        if missing_parts is None:
+            messagebox.showwarning("Figyelem", "A készletszint ellenőrzése nem sikerült.")
+        elif missing_parts:
             self.show_low_stock_popup(missing_parts)
         self.load_dashboard_stats()
-
     def low_stock(self):
         with Sessionlocal() as session:
             try:
@@ -145,7 +151,7 @@ class DashboardController:
             except Exception as e:
                 session.rollback()
                 print("Sikertelen adatlekérés!", e)
-                return []
+                return None
 
     def load_dashboard_stats(self):
         if not hasattr(self.view, "card1_value"):
@@ -157,7 +163,8 @@ class DashboardController:
 
                 total_parts_count = sum(p.amount for p in all_parts)
                 total_value = sum(p.amount * p.price for p in all_parts)
-                critical_count = len(self.low_stock() or [])
+                low_stock_result = self.low_stock()
+                critical_count = "?" if low_stock_result is None else len(low_stock_result)
 
                 self.view.card1_value.configure(text=f"{total_parts_count} db")
                 self.view.card2_value.configure(text=f"{total_value:,.0f} Ft".replace(",", " "))
@@ -181,6 +188,8 @@ class DashboardController:
 
             except Exception as e:
                 print(f"Hiba a statisztikák betöltésekor: {e}")
+                for card in (self.view.card1_value, self.view.card2_value, self.view.card3_value):
+                    card.configure(text="nem elérhető")
 
     def draw_chart(self, category_data):
         plt.style.use('dark_background')
@@ -234,9 +243,9 @@ class DashboardController:
             pdf = fpdf.FPDF()
             pdf.add_page()
 
-            pdf.add_font("Arial", "", "assets/fonts/arial.ttf")
-            pdf.add_font("Arial", "B", "assets/fonts/arialbd.ttf")
-            pdf.add_font("Arial", "I", "assets/fonts/ariali.ttf")
+            pdf.add_font("Arial", "", str(FONT_DIR / "arial.ttf"))
+            pdf.add_font("Arial", "B", str(FONT_DIR / "arialbd.ttf"))
+            pdf.add_font("Arial", "I", str(FONT_DIR / "ariali.ttf"))
 
             pdf.set_font("Arial", style="B", size=16)
             current_date = datetime.datetime.now().strftime("%Y.%m.%d")
@@ -246,16 +255,17 @@ class DashboardController:
 
             pdf.ln(5)
             pdf.set_font("Arial", style="B", size=10)
-            pdf.cell(35,10, "Cikkszám", border=1, align="center")
+            pdf.cell(30,10, "Cikkszám", border=1, align="center")
             pdf.cell(20,10,"Kép", border=1, align="center")
-            pdf.cell(75,10, "Megnevezés", border=1, align="center")
-            pdf.cell(30,10, "Készlet", border=1, align="center")
-            pdf.cell(30,10, "Egység ár", border=1, align="center",new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(50,10, "Megnevezés", border=1, align="center")
+            pdf.cell(40,10, "Polc", border=1, align="center")
+            pdf.cell(25,10, "Készlet", border=1, align="center")
+            pdf.cell(25,10, "Egységár", border=1, align="center",new_x="LMARGIN", new_y="NEXT")
 
             pdf.set_font("Arial", size=10)
             for part in parts:
                 if part.name:
-                    safe_name = part.name[:45]
+                    safe_name = part.name[:26]
                 else:
                     safe_name = "Ismeretlen"
                 if part.part_number:
@@ -264,7 +274,7 @@ class DashboardController:
                     safe_part_num = "N/A"
                 row_height = 20
 
-                pdf.cell(35, row_height, safe_part_num, border=1, align='C')
+                pdf.cell(30, row_height, safe_part_num, border=1, align='C')
                 img_x = pdf.get_x()
                 img_y = pdf.get_y()
                 pdf.cell(20,row_height, "", border=1)
@@ -273,10 +283,12 @@ class DashboardController:
                     pdf.image(part.image_path, x=img_x+2, y=img_y+2, w=16)
                 else:
                     pdf.text(img_x+9,img_y+11, "-")
-                pdf.cell(75, row_height, safe_name, border=1, align='L')
-                pdf.cell(30, row_height, f"{part.amount} db", border=1, align='C')
-                pdf.cell(30, row_height, f"{part.price} Ft", border=1, new_x="LMARGIN", new_y="NEXT", align='R')
-
+                pdf.cell(50, row_height, safe_name, border=1, align='L')
+                pdf.set_font("Arial", size=8)
+                pdf.cell(40, row_height, (part.location or "-")[:28], border=1, align='L')
+                pdf.set_font("Arial", size=10)
+                pdf.cell(25, row_height, f"{part.amount} db", border=1, align='C')
+                pdf.cell(25, row_height, f"{part.price} Ft", border=1, new_x="LMARGIN", new_y="NEXT", align='R')
             pdf.output(filepath)
             messagebox.showinfo("Siker","A raktárkészlet PDF sikeresen elmentve!")
 
@@ -302,7 +314,7 @@ class DashboardController:
                     writer = csv.writer(file, delimiter=';')
 
                     writer.writerow(
-                        ["Cikkszám", "Megnevezés", "Típus", "Készlet (db)", "Egységár (Ft)", "Összérték (Ft)"])
+                        ["Cikkszám", "Megnevezés", "Típus", "Polc","Készlet (db)", "Egységár (Ft)", "Összérték (Ft)"])
 
                     for part in parts:
                         if part.part_number:
@@ -319,7 +331,7 @@ class DashboardController:
                             safe_type = "-"
                         total_value = part.amount * part.price
 
-                        writer.writerow([safe_part_num, safe_name, safe_type, part.amount, part.price, total_value])
+                        writer.writerow([safe_part_num, safe_name, safe_type,part.location or "-" ,part.amount, part.price, total_value])
 
                 messagebox.showinfo("Siker", "A leltárív sikeresen exportálva CSV formátumban!")
             except Exception as e:
@@ -373,9 +385,7 @@ class DashboardController:
             parts_tree.insert("", "end", values=(part_number, name, amount, order))
 
     def open_admin_panel(self):
-        user = self.main_app.current_user
-        if user is None or user.role_id != ROLE_ADMIN:
-            messagebox.showerror("Hiba", "Ehhez nincs jogosultságod!")
+        if not require_admin(self.main_app):
             return
         self.clear_main_frame()
         admin_view = AdminView(self.view.main_frame)

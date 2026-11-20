@@ -7,12 +7,13 @@ import View.LoginView as LoginView
 import View.DashboardView as DashboardView
 import Controller.LoginController as LoginController
 import Controller.DashboardController as DashboardController
-from Model.database import ROLE_ADMIN
+from Model.database import ROLE_ADMIN, ensure_receipt_sequence
 import importlib
 
 class Controller:
     def __init__(self):
         self.current_user = None
+        ensure_receipt_sequence()
         self.app = MainView.MainView()
         self.login = LoginView.LoginView(self.app)
         self.dashboard = DashboardView.DashboardView(self.app)

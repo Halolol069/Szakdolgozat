@@ -4,25 +4,25 @@ import customtkinter
 class CompatibilityView(customtkinter.CTkFrame):
     def search_action(self):
         self.selected_engine = self.engine_dropdown.get()
-        if self.selected_engine == "":
-            messagebox.showerror("Hiba", "Kérlek válasz egy motort!")
+        if self.selected_engine in ("","Motor"):
+            messagebox.showwarning("Figyelem", "Kérlek válassz egy motort!")
             return
         self.controller.gets_parts_by_engine(self.selected_engine)
 
     def show_no_part_msgb(self):
-        messagebox.showinfo("Hiba", "Nincs alkatrész a motorhoz")
+        messagebox.showerror("Hiba", "Nincs alkatrész a motorhoz")
 
     def save_action(self):
         if (self.vehiclebrand_dropdown.get() == "Márka" or self.model_dropdown.get() == "Modell"  or
                 self.engine_dropdown.get() == "Motor"):
-            messagebox.showerror("Hiba", "Kérlek válassz ki egy autót és motort a szűrőben a mentésehez!")
+            messagebox.showinfo("Figyelem", "Kérlek válassz ki egy autót és motort a szűrőben a mentéséhez!")
             return
         self.controller.save_compatibility()
 
     def delete_action(self):
         if (self.vehiclebrand_dropdown.get() == "Márka" or self.model_dropdown.get() == "Modell" or
                 self.engine_dropdown.get() == "Motor"):
-            messagebox.showerror("Hiba", "Kérlek válassz ki egy autót és motort a szűrőben a törléshez!")
+            messagebox.showinfo("Figyelem", "Kérlek válassz ki egy autót és motort a szűrőben a törléshez!")
             return
         self.controller.delete_compatibility()
 
@@ -86,6 +86,7 @@ class CompatibilityView(customtkinter.CTkFrame):
 
         action_frame = customtkinter.CTkFrame(self.show_parts, fg_color="transparent")
         action_frame.grid(row=2, column=0, padx=15, pady=15, sticky="ew")
+        action_frame.grid_columnconfigure(2, weight=1)
 
         self.save_button = customtkinter.CTkButton(action_frame, text="Kijelöltek Hozzárendelése", command=self.save_action,fg_color="green",
                                                    hover_color="darkgreen", height=38, font=customtkinter.CTkFont(weight="bold"))
@@ -97,7 +98,7 @@ class CompatibilityView(customtkinter.CTkFrame):
         self.save_button_label.grid(row=0, column=2, padx=5)
         self.reset_parts_button = customtkinter.CTkButton(action_frame, text="Összes alkatrész",command=lambda: self.controller.load_all_parts(),fg_color="gray40", hover_color="gray30", height=38)
         self.reset_parts_button.grid(row=0, column=3, padx=10)
-        self.search_button = customtkinter.CTkButton(action_frame, text="Search", command=self.search_action)
+        self.search_button = customtkinter.CTkButton(action_frame, text="Keresés", command=self.search_action)
         self.search_button.grid(row=0, column=4, padx=10)
         self.search_button_label = customtkinter.CTkLabel(action_frame, text="")
         self.search_button_label.grid(row=0, column=5, padx=5)

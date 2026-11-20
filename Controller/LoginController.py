@@ -1,6 +1,7 @@
 import bcrypt
 
 from Model.database import User, Sessionlocal
+from Controller.password_utils import is_password_too_long
 
 class LoginController:
     def __init__(self, main_app, view):
@@ -19,13 +20,19 @@ class LoginController:
             self.show_error("Add meg a felhasználónevet és a jelszót!")
             return
 
-        with Sessionlocal() as session:
-            user = session.query(User).filter(
-                (User.name == login_name) | (User.email == login_name)
-            ).first()
+        try:
+            with Sessionlocal() as session:
+                user = session.query(User).filter(
+                    (User.name == login_name) | (User.email == login_name)
+                ).first()
+        except Exception as e:
+            print("Adatbázis-kapcsolati hiba a bejelentkezéskor:", e)
+            self.show_error("Nem sikerült csatlakozni az adatbázishoz!")
+            return
 
-        valid = user is not None and bcrypt.checkpw(
-            password.encode("utf-8"), user.password.encode("utf-8"))
+        valid = (user is not None
+                 and not is_password_too_long(password)
+                 and bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")))
         if not valid:
             self.view.password.delete(0, "end")
             self.show_error("Hibás felhasználónév vagy jelszó!")

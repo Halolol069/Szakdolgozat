@@ -2,7 +2,8 @@ import bcrypt
 from unittest.mock import MagicMock
 
 from Controller.LoginController import LoginController
-from Model.database import Sessionlocal, User, Role, ROLE_ADMIN, ROLE_WORKER
+from Controller.password_utils import password_error, is_password_too_long
+from Model.database import Sessionlocal, User, ROLE_ADMIN, ROLE_WORKER
 from Test.Test_Base import Test_base
 
 
@@ -55,8 +56,6 @@ class Test_Login_Logic(Test_base):
         hashed = bcrypt.hashpw(b"titok123", bcrypt.gensalt(rounds=4)).decode("utf-8")
         with Sessionlocal() as session:
             session.add_all([
-                Role(id=ROLE_ADMIN, name="Admin"),
-                Role(id=ROLE_WORKER, name="Raktaros"),
                 User(id=1, name="anna", email="anna@mail.hu", phone="111",
                      password=hashed, role_id=ROLE_WORKER, is_active=True),
                 User(id=2, name="bela", email="bela@mail.hu", phone="222",
@@ -99,3 +98,9 @@ class Test_Login_Logic(Test_base):
         app, view = self._login("", "")
         self.assertIsNone(app.current_user)
         self.assertIn("Add meg", view.error_label.text)
+
+    def test_password_rules(self):
+        self.assertIsNotNone(password_error("abc"), "A túl rövid jelszót el kell utasítani!")
+        self.assertIsNone(password_error("a" * 72), "A pontosan 72 bájtos jelszó még elfogadható!")
+        self.assertIsNotNone(password_error("a" * 73), "A 72 bájtnál hosszabb jelszót el kell utasítani!")
+        self.assertTrue(is_password_too_long("é" * 40), "Az ékezetes betűk 2 bájtnak számítanak!")

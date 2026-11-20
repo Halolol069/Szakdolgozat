@@ -5,21 +5,32 @@ import qrcode
 from View.CartView import CartView
 import customtkinter
 from fpdf import FPDF
-from sqlalchemy import func
-
+from sqlalchemy import func, text
+from pathlib import Path
 from Model.database import Sessionlocal, Parts, TransactionLog, SellHeader, SellItem, User, VehicleBrand, Modell, \
     Compatibility, Engine, VehicleType, Vehicle
+from Controller.permissions import require_active_user
+from Controller.model_labels import build_model_labels, resolve_model_id
 
+FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
+def next_receipt_number(session):
+    if session.get_bind().dialect.name == "postgresql":
+        return session.execute(text("SELECT nextval('sell_header_number_seq')")).scalar()
+    return (session.query(func.max(SellHeader.number)).scalar() or 10000) + 1
 
 class TransactionController:
     def __init__(self, main_app,view):
         self.main_app = main_app
         self.view = view
         self.cart = []
+        self.model_map = {}
         self.load_all_parts()
         self.view.to_cart_save_button.configure(command=self.add_to_cart)
         self.view.search_bar.bind("<KeyRelease>", self.load_all_parts)
         self.view.cart_review_button.configure(command=self.show_cart)
+
+        if hasattr(self.view, "reprint_button"):
+            self.view.reprint_button.configure(command=self.reprint_receipt)
 
         if hasattr(self.view, "vehicletype_dropdown"):
             self.load_vehicle_types()
@@ -43,6 +54,7 @@ class TransactionController:
         self.view.model_dropdown.set("Modell")
         self.view.engine_dropdown.configure(values=["Motor"])
         self.view.engine_dropdown.set("Motor")
+        self.load_all_parts()
         if not selected_type or selected_type == "Jármű típus":
             return
         with Sessionlocal() as session:
@@ -65,16 +77,23 @@ class TransactionController:
         self.view.model_dropdown.set("Modell")
         self.view.engine_dropdown.configure(values=["Motor"])
         self.view.engine_dropdown.set("Motor")
+        self.load_all_parts()
 
         with Sessionlocal() as session:
             try:
-                models = (
+                query = (
                     session.query(Modell)
                     .join(VehicleBrand)
                     .filter(VehicleBrand.name == selected_brand)
-                    .all()
                 )
-                model_list = [m.name for m in models]
+                selected_type = self.view.vehicletype_dropdown.get() if hasattr(self.view,
+                                                                                "vehicletype_dropdown") else None
+                if selected_type and selected_type != "Jármű típus":
+                    query = (query.join(Vehicle, Vehicle.modell_id == Modell.id)
+                             .join(VehicleType, Vehicle.vehicle_type_id == VehicleType.id)
+                             .filter(VehicleType.name == selected_type))
+                models = query.distinct().all()
+                model_list, self.model_map = build_model_labels(models)
                 self.view.model_dropdown.configure(values=model_list, command=self.load_engines)
             except Exception as e:
                 print("Hiba a modellek betöltésekor!", e)
@@ -82,10 +101,12 @@ class TransactionController:
     def load_engines(self, selected_model):
         self.view.engine_dropdown.configure(values=["Motor"])
         self.view.engine_dropdown.set("Motor")
+        self.load_all_parts()
 
         with Sessionlocal() as session:
             try:
-                model = session.query(Modell).filter_by(name=selected_model).first()
+                model_id = resolve_model_id(session, selected_model, self.model_map)
+                model = session.get(Modell, model_id) if model_id is not None else None
                 engine_list = []
                 if model:
                     for mc in model.motor_comps:
@@ -96,32 +117,22 @@ class TransactionController:
                 print("Hiba a motorok betöltésekor!", e)
 
     def filter_parts_by_vehicle(self, selected_engine):
-        for item in self.view.transaction_tree.get_children():
-            self.view.transaction_tree.delete(item)
+        self.load_all_parts(show_empty_message=True)
 
-        selected_model = self.view.model_dropdown.get()
-        if selected_engine == "Motor":
-            return
-
-        engine_id = int(selected_engine.split("]")[0].replace("[", ""))
-
-        with Sessionlocal() as session:
-            try:
-                compact_parts = (
-                    session.query(Parts)
-                    .join(Compatibility, Parts.id == Compatibility.part_id)
-                    .join(Modell, Compatibility.modell_id == Modell.id)
-                    .filter(Modell.name == selected_model, Compatibility.engine_id == engine_id)
-                    .all()
-                )
-                if not compact_parts:
-                    messagebox.showinfo("Nincs találat","Ehhez a járműhöz jelenleg nincs rögzített kompatibilis alkatrész!")
-                    return
-                for part in compact_parts:
-                    self.view.transaction_tree.insert("", "end",values=(part.id, part.part_number, part.name, part.amount,part.type, part.price, part.location))
-            except Exception as e:
-                print("Hiba a kompatiblis alkatrészek szűrésekor: ", e)
-
+    def get_vehicle_filter(self, session):
+        if not hasattr(self.view, "engine_dropdown"):
+            return None
+        raw_engine = self.view.engine_dropdown.get()
+        if not raw_engine or not raw_engine.startswith("["):
+            return None
+        try:
+            engine_id = int(raw_engine.split("]")[0].replace("[", ""))
+        except ValueError:
+            return None
+        model_id = resolve_model_id(session, self.view.model_dropdown.get(), self.model_map)
+        if model_id is None:
+            return None
+        return model_id, engine_id
     def reset_filters(self):
         if hasattr(self.view, "vehicletype_dropdown"):
             self.view.vehicletype_dropdown.set("Jármű típus")
@@ -134,22 +145,34 @@ class TransactionController:
         self.view.search_bar.delete(0, "end")
         self.load_all_parts()
 
-    def load_all_parts(self, event=None):
+    def load_all_parts(self, event=None, show_empty_message=False):
         for item in self.view.transaction_tree.get_children():
             self.view.transaction_tree.delete(item)
 
         with Sessionlocal() as session:
             try:
-                search_term = self.view.search_bar.get()
+                query = session.query(Parts)
+                vehicle_filter = self.get_vehicle_filter(session)
+                if vehicle_filter:
+                    model_id, engine_id = vehicle_filter
+                    query = (query.join(Compatibility, Parts.id == Compatibility.part_id)
+                             .filter(Compatibility.modell_id == model_id, Compatibility.engine_id == engine_id))
+
+                search_term = self.view.search_bar.get().strip()
                 if search_term:
-                    all_parts=session.query(Parts).filter(Parts.name.ilike(f"%{search_term}%") | (Parts.part_number.ilike(f"%{search_term}%"))).all()
-                else:
-                    all_parts = session.query(Parts).all()
+                    query = query.filter(Parts.name.ilike(f"%{search_term}%") |
+                                         Parts.part_number.ilike(f"%{search_term}%") |
+                                         Parts.type.ilike(f"%{search_term}%"))
+
+                all_parts = query.order_by(Parts.id).all()
+
+                if vehicle_filter and not all_parts and show_empty_message:
+                    messagebox.showinfo("Nincs találat","Ehhez a járműhöz jelenleg nincs rögzített kompatibilis alkatrész!")
 
                 for part in all_parts:
-                        self.view.transaction_tree.insert("", "end", values=(part.id,part.part_number, part.name, part.amount, part.type, part.price, part.location))
+                    self.view.transaction_tree.insert("", "end", values=(part.id, part.part_number, part.name, part.amount,part.type, part.price, part.location))
             except Exception as e:
-                print("Hiba történt az adatbázis mentésekor!",e)
+                print("Hiba történt az alkatrészek betöltésekor!", e)
 
     def load_transaction_history(self):
         if not hasattr(self.view, 'history_tree'):
@@ -253,6 +276,9 @@ class TransactionController:
             messagebox.showerror("Hiba", "Nincs bejelentkezett felhasználó!")
             return False
 
+        if not require_active_user(self.main_app):
+            return False
+
         cart_type = self.cart[0]["type"]
         buyer_name = "-"
 
@@ -270,14 +296,15 @@ class TransactionController:
         if not filepath:
             return False
 
+        receipt_number = None
         with Sessionlocal() as session:
             try:
                 new_header = None
                 if cart_type == "Kiadás":
-                    max_num = session.query(func.max(SellHeader.number)).scalar() or 10000
-                    new_header = SellHeader(date=datetime.datetime.now(), number=max_num + 1, buyer_name=buyer_name)
+                    new_header = SellHeader(date=datetime.datetime.now(), number=next_receipt_number(session),buyer_name=buyer_name)
                     session.add(new_header)
                     session.flush()
+                    receipt_number = new_header.number
 
                 for item in self.cart:
                     current_part = session.query(Parts).filter(Parts.id == item["part_id"]).with_for_update().first()
@@ -300,7 +327,7 @@ class TransactionController:
                             sell_header_id=new_header.id,
                             part_id=current_part.id,
                             amount=item["quantity"],
-                            price=current_part.price
+                            price=item["price"]
                         )
                         session.add(new_item)
 
@@ -320,25 +347,90 @@ class TransactionController:
                 messagebox.showerror("Hiba", "Váratlan hiba történt a mentéskor!")
                 return False
 
-        if self.generate_batch_receipt(filepath, buyer_name, cart_type):
+        if self.generate_batch_receipt(filepath, buyer_name, cart_type, receipt_number=receipt_number):
             messagebox.showinfo("Siker", "A tranzakció sikeresen rögzítve, PDF legenerálva!")
+        elif receipt_number is not None:
+            messagebox.showwarning("Figyelem",f"A tranzakció rögzítve lett az adatbázisban, de a PDF mentése sikertelen volt!\n"
+                                   f"Bizonylatszám: {receipt_number}\n"
+                                   f"A szállítólevelet a „Szállítólevél újranyomtatása” gombbal később elkészítheted.")
         else:
             messagebox.showwarning("Figyelem","A tranzakció rögzítve lett az adatbázisban, de a PDF mentése sikertelen volt!")
         self.cart.clear()
         self.load_all_parts()
         self.load_transaction_history()
         return True
-    def generate_batch_receipt(self, filepath, buyer_name, cart_type):
+
+    def reprint_receipt(self):
+        if not require_active_user(self.main_app):
+            return False
+
+        dialog = customtkinter.CTkInputDialog(text="Add meg a bizonylatszámot:", title="Szállítólevél újranyomtatása")
+        raw_number = (dialog.get_input() or "").strip()
+        if not raw_number:
+            return False
+        if not (raw_number.isascii() and raw_number.isdigit()):
+            messagebox.showerror("Hiba", "A bizonylatszám csak számjegyekből állhat!")
+            return False
+
+        with Sessionlocal() as session:
+            header = session.query(SellHeader).filter(SellHeader.number == int(raw_number)).first()
+            if header is None:
+                messagebox.showerror("Hiba", f"Nincs {raw_number} számú bizonylat!")
+                return False
+
+            items = []
+            for sell_item in header.sell_items:
+                items.append({
+                    "name": sell_item.part.name,
+                    "part_number": sell_item.part.part_number,
+                    "quantity": sell_item.amount,
+                    "price": sell_item.price,
+                    "total": sell_item.amount * sell_item.price,
+                })
+            buyer_name = header.buyer_name or "-"
+            receipt_date = header.date
+            receipt_number = header.number
+            if not items:
+                messagebox.showerror("Hiba", f"A(z) {receipt_number} számú bizonylaton nincs tétel!")
+                return False
+
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF", "*.pdf")],
+            title="Szállítólevél mentése"
+        )
+        if not filepath:
+            return False
+
+        if self.generate_batch_receipt(filepath, buyer_name, "Kiadás", receipt_number=receipt_number,
+                                       items=items, receipt_date=receipt_date):
+            messagebox.showinfo("Siker", f"A(z) {receipt_number} számú szállítólevél újra elkészült!")
+            return True
+        messagebox.showerror("Hiba", f"A(z) {receipt_number} számú szállítólevél mentése most sem sikerült!")
+        return False
+
+    def generate_batch_receipt(self, filepath, buyer_name, cart_type, receipt_number=None, items=None, receipt_date=None):
+        if items is None:
+            items = self.cart
+        if receipt_date is None:
+            receipt_date = datetime.datetime.now()
         try:
-            qr_data = f"Datum: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} | Tipus: {cart_type} | Vevo: {buyer_name}"
+            qr_parts = []
+            if receipt_number is not None:
+                qr_parts.append(f"Bizonylatszam: {receipt_number}")
+                qr_parts.append(f"Datum: {receipt_date.strftime('%Y-%m-%d %H:%M')}")
+                qr_parts.append(f"Tipus: {cart_type}")
+            if cart_type == "Kiadás":
+                qr_parts.append(f"Vevo: {buyer_name}")
+            qr_data = " | ".join(qr_parts)
             qr_img = qrcode.make(qr_data)
             temp_qr_path = "temp_qr.png"
             qr_img.save(temp_qr_path)
             pdf = FPDF()
             pdf.add_page()
-            pdf.add_font("Arial", "", "assets/fonts/arial.ttf")
-            pdf.add_font("Arial", "B", "assets/fonts/arialbd.ttf")
-            pdf.add_font("Arial", "I", "assets/fonts/ariali.ttf")
+            pdf.add_font("Arial", "", str(FONT_DIR / "arial.ttf"))
+            pdf.add_font("Arial", "B", str(FONT_DIR / "arialbd.ttf"))
+            pdf.add_font("Arial", "I", str(FONT_DIR / "ariali.ttf"))
 
             pdf.set_font("Arial", "B", 16)
             pdf.cell(0, 10, text="Szállítólevél", new_x="LMARGIN", new_y="NEXT", align="center")
@@ -346,9 +438,11 @@ class TransactionController:
             pdf.ln(10)
 
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 8, text=f"Dátum: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", new_x="LMARGIN",
+            pdf.cell(0, 8, text=f"Dátum: {receipt_date.strftime('%Y-%m-%d %H:%M')}", new_x="LMARGIN",
                      new_y="NEXT", align="center")
             pdf.cell(0, 8, text=f"Tranzakció típusa: {cart_type}", new_x="LMARGIN", new_y="NEXT", align="center")
+            if receipt_number is not None:
+                pdf.cell(0, 8, text=f"Bizonylatszám: {receipt_number}", new_x="LMARGIN", new_y="NEXT", align="center")
             if cart_type == "Kiadás":
                 pdf.cell(0, 8, text=f"Vevő neve: {buyer_name}", new_x="LMARGIN", new_y="NEXT", align="center")
             pdf.ln(10)
@@ -362,7 +456,7 @@ class TransactionController:
 
             pdf.set_font("Arial", "", 12)
             grand_total = 0
-            for item in self.cart:
+            for item in items:
                 safe_name = item["name"][:25] if item.get("name") else "-"
                 safe_part_number = item["part_number"][:18] if item.get("part_number") else "-"
                 pdf.cell(40,10, safe_part_number, border=1, align="L")
@@ -391,6 +485,9 @@ class TransactionController:
             return False
 
     def valid_quantity(self, raw_quantity):
-        if not raw_quantity.isdigit() or int(raw_quantity) <= 0:
+        if not raw_quantity or not raw_quantity.isascii() or not raw_quantity.isdigit():
             return False
-        return True
+        try:
+            return int(raw_quantity) > 0
+        except ValueError:
+            return False
