@@ -1,4 +1,4 @@
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import customtkinter
 
 
@@ -179,7 +179,8 @@ class AdminView(customtkinter.CTkFrame):
         self.brand_name_entry = customtkinter.CTkEntry(brand_form, placeholder_text="Márka (pl. Audi)")
         self.brand_name_entry.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
-        self.brand_country_entry = customtkinter.CTkEntry(brand_form, placeholder_text="Ország (pl. Germany)")
+        self.brand_country_entry = customtkinter.CTkComboBox(brand_form, values=[])
+        self.brand_country_entry.set("")
         self.brand_country_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         self.add_brand_btn = customtkinter.CTkButton(brand_form, text="Hozzáadás", width=100)
@@ -189,3 +190,35 @@ class AdminView(customtkinter.CTkFrame):
             brand_form, text="Módosítás", width=100, fg_color="gray40", hover_color="gray30"
         )
         self.update_brand_btn.grid(row=0, column=3, padx=5, pady=5)
+
+    def ask_password(self, title, text):
+        window = customtkinter.CTkToplevel(self)
+        window.title(title)
+        window.resizable(False, False)
+        window.after(100, window.lift)
+
+        customtkinter.CTkLabel(window, text=text).pack(padx=20, pady=(20, 5))
+        entry = customtkinter.CTkEntry(window, show="*", width=260)
+        entry.pack(padx=20, pady=5)
+
+        show_var = customtkinter.BooleanVar(value=False)
+        customtkinter.CTkCheckBox(window, text="Jelszó megjelenítése", variable=show_var, command=lambda: entry.configure(show="" if show_var.get() else "*")).pack(pady=5)
+
+        result = {"password": None}
+
+        def confirm(event=None):
+            if not entry.get().strip():
+                messagebox.showwarning("Figyelem", "A jelszó nem lehet üres!", parent=window)
+                entry.focus()
+                return
+            result["password"] = entry.get()
+            window.destroy()
+
+        button_frame = customtkinter.CTkFrame(window, fg_color="transparent")
+        button_frame.pack(pady=(5, 20))
+        customtkinter.CTkButton(button_frame, text="OK", width=120, command=confirm).pack(side="left", padx=5)
+        customtkinter.CTkButton(button_frame, text="Mégse", width=120, fg_color="gray40", hover_color="gray30", command=window.destroy).pack(side="left", padx=5)
+        entry.bind("<Return>", confirm)
+        entry.focus()
+        window.wait_window()
+        return result["password"]

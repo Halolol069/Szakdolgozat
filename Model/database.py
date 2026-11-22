@@ -164,6 +164,23 @@ class TransactionLog(Base):
     date:Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
 
 Sessionlocal = sessionmaker(bind=engine)
+RECEIPT_SEQUENCE="sell_header_number_seq"
+def ensure_receipt_sequence():
+    with Sessionlocal() as session:
+        if session.get_bind().dialect.name != "postgresql":
+            return
+        try:
+            exists = session.execute(text(f"SELECT to_regclass('{RECEIPT_SEQUENCE}')")).scalar()
+            if exists is None:
+                session.execute(text(f"CREATE SEQUENCE {RECEIPT_SEQUENCE}"))
+                session.execute(text(
+                    f"SELECT setval('{RECEIPT_SEQUENCE}', "
+                    f"(SELECT GREATEST(COALESCE(MAX(number), 10000), 10000) FROM sell_headers))"))
+                session.commit()
+        except Exception as e:
+            session.rollback()
+            print("A bizonylatszám-szekvencia létrehozása sikertelen:", e)
+
 def seed_roles():
     with Sessionlocal() as session:
         if session.get(Role, ROLE_ADMIN) is None:
@@ -416,6 +433,7 @@ if __name__ == '__main__':
         Base.metadata.create_all(engine)
         seed_roles()
         seed_examples()
+        ensure_receipt_sequence()
         print("Successfully created all tables")
     except Exception as e:
         print("Failed to create tables", e)

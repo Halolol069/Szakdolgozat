@@ -1,15 +1,15 @@
 import datetime
 from tkinter import messagebox
 import bcrypt
-import customtkinter
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from Model.database import (
-    Sessionlocal, User, Role, Parts, TransactionLog,
+    Sessionlocal, User, Parts, TransactionLog,
     Manufacturer, VehicleBrand, ROLE_ADMIN, ROLE_WORKER
 )
-
+from Controller.password_utils import password_error
+from Controller.permissions import require_admin
 
 class AdminController:
     def __init__(self, main_app, view):
@@ -25,7 +25,6 @@ class AdminController:
         self.view.rename_man_btn.configure(command=self.rename_manufacturer)
         self.view.add_brand_btn.configure(command=self.add_brand)
         self.view.update_brand_btn.configure(command=self.update_brand)
-
         self.load_users()
         self.load_logs()
         self.load_catalog()
@@ -52,8 +51,7 @@ class AdminController:
 
     def create_user(self):
 
-        if not self.main_app.current_user or getattr(self.main_app.current_user, "role_id", None) != ROLE_ADMIN:
-            messagebox.showerror("Hiba", "Nincs jogosultságod új felhasználót létrehozni!")
+        if not require_admin(self.main_app):
             return
 
         name = self.view.new_user_name.get().strip()
@@ -70,8 +68,9 @@ class AdminController:
             messagebox.showerror("Hiba", "Az e-mail cím formátuma nem megfelelő (@ és . kötelező)!")
             return
 
-        if len(raw_pw) < 6:
-            messagebox.showerror("Hiba", "A jelszó túl rövid, minimum 6 karakter kötelező!")
+        pw_error = password_error(raw_pw)
+        if pw_error:
+            messagebox.showerror("Hiba", pw_error)
             return
 
         if not phone.lstrip("+").isdigit():
@@ -111,6 +110,8 @@ class AdminController:
                     messagebox.showerror("Hiba", "A megadott adat már foglalt vagy adatbázis hiba történt!")
 
     def toggle_user_status(self):
+        if not require_admin(self.main_app):
+            return
         selected = self.view.user_tree.selection()
         if not selected:
             messagebox.showwarning("Figyelem", "Kérlek válassz ki egy felhasználót a táblázatból!")
@@ -135,6 +136,8 @@ class AdminController:
                 self.load_users()
 
     def reset_user_password(self):
+        if not require_admin(self.main_app):
+            return
         selected = self.view.user_tree.selection()
         if not selected:
             messagebox.showwarning("Figyelem", "Kérlek válassz ki egy felhasználót!")
@@ -143,11 +146,13 @@ class AdminController:
         user_id = int(self.view.user_tree.item(selected[0])["values"][0])
         user_name = self.view.user_tree.item(selected[0])["values"][1]
 
-        dialog = customtkinter.CTkInputDialog(
-            text=f"Add meg az új jelszót ({user_name} számára):", title="Jelszó visszaállítása"
-        )
-        new_pw = dialog.get_input()
+        new_pw = self.view.ask_password("Jelszó visszaállítása", f"Add meg az új jelszót ({user_name} számára):")
         if not new_pw or not new_pw.strip():
+            return
+
+        pw_error = password_error(new_pw.strip())
+        if pw_error:
+            messagebox.showerror("Hiba", pw_error)
             return
 
         hashed_pw = bcrypt.hashpw(new_pw.strip().encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -159,6 +164,8 @@ class AdminController:
                 messagebox.showinfo("Siker", f"{user.name} jelszava sikeresen frissítve!")
 
     def toggle_user_role(self):
+        if not require_admin(self.main_app):
+            return
         selected = self.view.user_tree.selection()
         if not selected:
             messagebox.showwarning("Figyelem", "Kérlek válassz ki egy felhasználót!")
@@ -203,8 +210,7 @@ class AdminController:
                 self.view.admin_log_tree.insert("", "end", values=(log.id, date_str, log.transaction_type, part_name, qty_str,user_name))
 
     def storno_transaction(self):
-        if self.main_app.current_user.role_id != ROLE_ADMIN:
-            messagebox.showerror("Hiba", "Nincs jogosultságod a tranzakciók stornózásához!")
+        if not require_admin(self.main_app):
             return
         selected = self.view.admin_log_tree.selection()
         if not selected:
@@ -215,7 +221,10 @@ class AdminController:
 
         with Sessionlocal() as session:
             try:
-                log_entry = session.get(TransactionLog, log_id)
+                log_entry = (session.query(TransactionLog)
+                             .filter(TransactionLog.id == log_id)
+                             .with_for_update()
+                             .first())
                 if not log_entry:
                     return
 
@@ -279,8 +288,14 @@ class AdminController:
                 self.view.man_tree.insert("", "end", values=(m.id, m.name))
             for b in session.query(VehicleBrand).order_by(VehicleBrand.id).all():
                 self.view.brand_tree.insert("", "end", values=(b.id, b.name, b.country))
+            countries = sorted({c for (c,) in session.query(VehicleBrand.country).all() if c})
+            country_box = getattr(self.view, "brand_country_entry", None)
+            if country_box is not None:
+                country_box.configure(values=countries)
 
     def add_manufacturer(self):
+        if not require_admin(self.main_app):
+            return
         name = self.view.man_name_entry.get().strip()
         if not name:
             messagebox.showerror("Hiba", "Add meg a gyártó nevét!")
@@ -297,6 +312,8 @@ class AdminController:
             self.load_catalog()
 
     def rename_manufacturer(self):
+        if not require_admin(self.main_app):
+            return
         selected = self.view.man_tree.selection()
         name = self.view.man_name_entry.get().strip()
         if not selected or not name:
@@ -305,6 +322,12 @@ class AdminController:
 
         man_id = int(self.view.man_tree.item(selected[0])["values"][0])
         with Sessionlocal() as session:
+            duplicate = (session.query(Manufacturer)
+                         .filter(Manufacturer.name.ilike(name), Manufacturer.id != man_id)
+                         .first())
+            if duplicate:
+                messagebox.showerror("Hiba", "Ilyen nevű gyártó már szerepel az adatbázisban!")
+                return
             man = session.get(Manufacturer, man_id)
             if man:
                 man.name = name
@@ -313,6 +336,8 @@ class AdminController:
                 self.load_catalog()
 
     def add_brand(self):
+        if not require_admin(self.main_app):
+            return
         name = self.view.brand_name_entry.get().strip()
         country = self.view.brand_country_entry.get().strip()
         if not name or not country:
@@ -324,13 +349,15 @@ class AdminController:
                 session.add(VehicleBrand(name=name, country=country))
                 session.commit()
                 self.view.brand_name_entry.delete(0, "end")
-                self.view.brand_country_entry.delete(0, "end")
+                self.view.brand_country_entry.set("")
                 self.load_catalog()
             except IntegrityError:
                 session.rollback()
                 messagebox.showerror("Hiba", "Ez a járműmárka már létezik!")
 
     def update_brand(self):
+        if not require_admin(self.main_app):
+            return
         selected = self.view.brand_tree.selection()
         name = self.view.brand_name_entry.get().strip()
         country = self.view.brand_country_entry.get().strip()
@@ -347,7 +374,7 @@ class AdminController:
                     brand.country = country
                     session.commit()
                     self.view.brand_name_entry.delete(0, "end")
-                    self.view.brand_country_entry.delete(0, "end")
+                    self.view.brand_country_entry.set("")
                     self.load_catalog()
             except IntegrityError:
                 session.rollback()

@@ -8,7 +8,6 @@ class AddPartView(customtkinter.CTkToplevel):
         self.title("Új Alkatrész Hozzáadása")
         self.geometry("460x680")
 
-        self.attributes("-topmost", True)
         self.manufacturer_dict = manufacturer_dict
         self.scrollable_frame = customtkinter.CTkScrollableFrame(self, corner_radius=10)
         self.scrollable_frame.pack(fill="both", expand=True, padx=15, pady=15)
@@ -26,9 +25,10 @@ class AddPartView(customtkinter.CTkToplevel):
         self.name = customtkinter.CTkEntry(self.scrollable_frame, placeholder_text="Megnevezés (pl. Fékbetét)", height=36)
         self.name.pack(pady=6, padx=20, fill="x")
 
-        self.type_label = customtkinter.CTkLabel(self.scrollable_frame, text="Típus:", height=36,font=customtkinter.CTkFont(size=20, weight="bold"))
+        self.type_label = customtkinter.CTkLabel(self.scrollable_frame, text="Típus (válasz vagy írj egy újat):", height=36,font=customtkinter.CTkFont(size=20, weight="bold"))
         self.type_label.pack(pady=(10, 0), padx=20, anchor="w")
-        self.type = customtkinter.CTkEntry(self.scrollable_frame, placeholder_text="Típus (pl. Fékrendszer)", height=36)
+        self.type = customtkinter.CTkComboBox(self.scrollable_frame, values=[], height=36)
+        self.type.set("")
         self.type.pack(pady=6, padx=20, fill="x")
 
         self.location_label = customtkinter.CTkLabel(self.scrollable_frame, text="Polc:", height=36,font=customtkinter.CTkFont(size=20, weight="bold"))

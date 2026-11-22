@@ -12,7 +12,7 @@ class TransactionView(customtkinter.CTkFrame):
         self.transaction_quantity_menu = customtkinter.CTkEntry(self, placeholder_text="Mennyiség (pl. 5)")
         self.transaction_quantity_menu.grid(row=0, column=2, padx=20, pady=20, sticky="nsew")
 
-        self.search_bar = customtkinter.CTkEntry(self, placeholder_text="Keresés név vagy cikkszám alapján")
+        self.search_bar = customtkinter.CTkEntry(self, placeholder_text="Keresés név vagy cikkszám, típus alapján")
         self.search_bar.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
 
         self.filter_frame = customtkinter.CTkFrame(self, fg_color="transparent")
@@ -68,6 +68,9 @@ class TransactionView(customtkinter.CTkFrame):
 
         self.cart_review_button = customtkinter.CTkButton(master=self, text="Kosár megtekintése")
         self.cart_review_button.grid(row=3, column=1, padx=20, pady=20, sticky="nsew")
+
+        self.reprint_button = customtkinter.CTkButton(master=self, text="Szállítólevél újranyomtatása")
+        self.reprint_button.grid(row=3, column=2, padx=20, pady=20, sticky="nsew")
 
         self.log_label=customtkinter.CTkLabel(master=self, text="Legutóbbi készletmozgások: ", font=("Arial", 14, "bold"))
         self.log_label.grid(row=4, column=0, columnspan=3, padx=20, pady=(20,5), sticky="nsew")

@@ -1,14 +1,15 @@
 from tkinter import messagebox
 
-from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Engine, Vehicle, VehicleType, \
-    ROLE_ADMIN
-
-
+from Model.database import Sessionlocal, VehicleBrand, Modell, Parts, Compatibility, Vehicle, VehicleType
+from Controller.model_labels import build_model_labels, resolve_model_id
+from Controller.permissions import require_admin
 class CompatibilityController:
     def __init__(self, main_app, view):
         self.main_app = main_app
         self.view = view
         self.view.controller = self
+        self.model_map = {}
+        self.listed_vehicle = None
         self.load_vehicletype()
         self.load_all_parts()
 
@@ -48,16 +49,18 @@ class CompatibilityController:
                       .join(VehicleBrand).
                       join(Vehicle).
                       join(VehicleType)
-                      .filter(VehicleBrand.name == selected_brand,VehicleType.name == selected_type)
+                      .filter(VehicleBrand.name == selected_brand, VehicleType.name == selected_type)
+                      .distinct()
                       .all())
-            self.model_list = [m.name for m in models]
+            self.model_list, self.model_map = build_model_labels(models)
             self.view.model_dropdown.configure(values=self.model_list, command=self.load_engines)
             self.view.model_dropdown.set("Modell")
 
     def load_engines(self, selected_model):
         self.view.engine_dropdown.set("Motor")
         with Sessionlocal() as session:
-            self.model = session.query(Modell).filter_by(name=selected_model).first()
+            model_id = resolve_model_id(session, selected_model, self.model_map)
+            self.model = session.get(Modell, model_id) if model_id is not None else None
             if self.model is None:
                 messagebox.showwarning("Figyelem", "Előbb válassz ki egy modellt!")
                 return
@@ -68,6 +71,7 @@ class CompatibilityController:
             self.view.engine_dropdown.configure(values=self.engine_list)
 
     def load_all_parts(self):
+        self.listed_vehicle = None
         for parts in self.view.parts_tree.get_children():
             self.view.parts_tree.delete(parts)
         with Sessionlocal() as session:
@@ -83,8 +87,7 @@ class CompatibilityController:
                 messagebox.showerror("Hiba", f"Az alkatrészek betöltése sikertelen: {e}")
 
     def save_compatibility(self):
-        if self.main_app.current_user.role_id != ROLE_ADMIN:
-            messagebox.showerror("Hiba", "Nincs jogosultságod kompatibilitást rögzíteni!")
+        if not require_admin(self.main_app):
             return
         with Sessionlocal() as session:
             self.selected_parts = self.view.parts_tree.selection()
@@ -98,7 +101,8 @@ class CompatibilityController:
             engine_id = int(raw_engine.split("]")[0].replace("[", ""))
             model_name = self.view.model_dropdown.get()
             new_connection = 0
-            model = session.query(Modell).filter_by(name=model_name).first()
+            model_id = resolve_model_id(session, model_name, self.model_map)
+            model = session.get(Modell, model_id) if model_id is not None else None
             if model is None:
                 messagebox.showwarning("Figyelem", "Előbb válassz ki egy modellt!")
                 return
@@ -120,8 +124,7 @@ class CompatibilityController:
             self.view.after(3000, lambda: self.view.save_button_label.configure(text=""))
 
     def delete_compatibility(self):
-        if self.main_app.current_user.role_id != ROLE_ADMIN:
-            messagebox.showerror("Hiba", "Nincs jogosultságod kompatibilitást rögzíteni!")
+        if not require_admin(self.main_app):
             return
         self.selected_parts = self.view.parts_tree.selection()
         if not self.selected_parts:
@@ -134,10 +137,13 @@ class CompatibilityController:
             return
         engine_id = int(raw_engine.split("]")[0].replace("[", ""))
         model_name = self.view.model_dropdown.get()
-
+        if self.listed_vehicle != (model_name, raw_engine):
+            messagebox.showwarning("Figyelem", "Előbb a Keresés gombbal listázd ki a járműhöz rendelt alkatrészeket!")
+            return
         with Sessionlocal() as session:
             try:
-                model = session.query(Modell).filter_by(name=model_name).first()
+                model_id = resolve_model_id(session, model_name, self.model_map)
+                model = session.get(Modell, model_id) if model_id is not None else None
                 if not model:
                     messagebox.showerror("Hiba", "Érvénytelen modell!")
                     return
@@ -149,6 +155,10 @@ class CompatibilityController:
                     if existing:
                         session.delete(existing)
                         deleted_count += 1
+                if deleted_count == 0:
+                    self.view.save_button_label.configure(text="Nincs törölhető kapcsolat!", text_color="orange")
+                    self.view.after(3000, lambda: self.view.save_button_label.configure(text=""))
+                    return
                 session.commit()
                 self.view.save_button_label.configure(text=f"Sikeres törlés ({deleted_count} db)", text_color="green")
                 self.view.after(3000, lambda: self.view.save_button_label.configure(text=""))
@@ -158,6 +168,7 @@ class CompatibilityController:
                 messagebox.showerror("Hiba", f"Hiba történt a törlés során: {e}")
 
     def gets_parts_by_engine(self, raw_engine):
+        self.listed_vehicle = None
         for parts in self.view.parts_tree.get_children():
             self.view.parts_tree.delete(parts)
         if raw_engine == "Motor":
@@ -168,15 +179,19 @@ class CompatibilityController:
 
         with Sessionlocal() as session:
             try:
+                model_id = resolve_model_id(session, selected_model, self.model_map)
+                if model_id is None:
+                    return self.view.show_no_part_msgb()
                 part_list = (
                     session.query(Parts)
                     .join(Compatibility, Parts.id == Compatibility.part_id)
-                    .join(Modell, Compatibility.modell_id == Modell.id)
-                    .filter(Compatibility.engine_id == engine_id, Modell.name == selected_model)
+                    .filter(Compatibility.engine_id == engine_id, Compatibility.modell_id == model_id)
                     .all())
 
                 if len(part_list) == 0:
+                    self.listed_vehicle = None
                     return self.view.show_no_part_msgb()
+                self.listed_vehicle = (selected_model, raw_engine)
                 for parts in part_list:
                     man_name = "None" if parts.manufacturer is None else parts.manufacturer.name
                     self.view.parts_tree.insert(parent="", index="end", iid=str(parts.id),values=(parts.name, man_name, parts.type, parts.price))

@@ -16,7 +16,7 @@ class PartsView(customtkinter.CTkFrame):
         self.title_label = customtkinter.CTkLabel(self.top_frame, text="Alkatrészek Kezelése", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.title_label.pack(side="left", padx=(0,20))
 
-        self.search_entry = customtkinter.CTkEntry(self.top_frame, placeholder_text="Gyorskeresés név vagy cikkszám alapján...", width=280, height=35)
+        self.search_entry = customtkinter.CTkEntry(self.top_frame, placeholder_text="Gyorskeresés név vagy cikkszám, típus alapján...", width=280, height=35)
         self.search_entry.pack(side="left", padx=10)
 
         self.delete_button = customtkinter.CTkButton(self.top_frame, text="Törlés", fg_color="red", hover_color="darkred", width=100,height=35)
