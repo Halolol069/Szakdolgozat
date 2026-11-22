@@ -40,3 +40,7 @@ Kezdő felhasználók (a jelszavak a `.env` fájlban megadott értékek):
 python -m unittest discover -s Test -p "Test_*.py" -v
 ```
 Az egységtesztek memóriabeli SQLite-adatbázison futnak, ezért nem módosítják a PostgreSQL-adatbázist.
+
+## Verzió
+- `v1.0`: a szakdolgozat eredetileg beadott állapota.
+- `v1.1`: a konzulensi visszajelzés alapján javított állapot. A szakdolgozat ezt az állapotot írja le.

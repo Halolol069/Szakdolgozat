@@ -1,5 +1,7 @@
 import datetime
 import unittest
+import os
+import tempfile
 from unittest.mock import patch
 
 from Controller.TransactionController import TransactionController, next_receipt_number
@@ -230,6 +232,26 @@ class Test_Transaction_Logic(Test_base):
 
         self.assertTrue(mock_error.called, "Nem létező bizonylatszámnál hibaüzenet kell!")
         self.assertFalse(mock_pdf.called, "Nem létező bizonylatnál nem készülhet PDF!")
+
+    def test_qr_contains_date_and_type(self):
+        import qrcode
+        real_make = qrcode.make
+        captured = []
+
+        def spy(data, *args, **kwargs):
+            captured.append(data)
+            return real_make(data, *args, **kwargs)
+
+        items = [{"name": "Teszt", "part_number": "T-1", "quantity": 1, "price": 100, "total": 100}]
+        out = os.path.join(tempfile.gettempdir(), "qr_teszt.pdf")
+        with patch('Controller.TransactionController.qrcode.make', side_effect=spy):
+            self.assertTrue(self.controller.generate_batch_receipt(out, "-", "Bevételezés", items=items))
+            self.assertTrue(self.controller.generate_batch_receipt(out, "Vevő", "Kiadás", receipt_number=10001, items=items))
+
+        self.assertIn("Datum:", captured[0], "Bevételezéskor is kell dátum a QR-ba!")
+        self.assertIn("Tipus: Bevételezés", captured[0], "Bevételezéskor is kell típus a QR-ba!")
+        self.assertIn("Bizonylatszam: 10001", captured[1])
+        self.assertIn("Vevo: Vevő", captured[1])
 
     def test_search_stays_within_vehicle_filter(self):
         with Sessionlocal() as session:

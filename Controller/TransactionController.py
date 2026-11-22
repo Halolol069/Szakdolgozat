@@ -418,8 +418,8 @@ class TransactionController:
             qr_parts = []
             if receipt_number is not None:
                 qr_parts.append(f"Bizonylatszam: {receipt_number}")
-                qr_parts.append(f"Datum: {receipt_date.strftime('%Y-%m-%d %H:%M')}")
-                qr_parts.append(f"Tipus: {cart_type}")
+            qr_parts.append(f"Datum: {receipt_date.strftime('%Y-%m-%d %H:%M')}")
+            qr_parts.append(f"Tipus: {cart_type}")
             if cart_type == "Kiadás":
                 qr_parts.append(f"Vevo: {buyer_name}")
             qr_data = " | ".join(qr_parts)
